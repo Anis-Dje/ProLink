@@ -391,7 +391,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required ValueChanged<String?> onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontSize: 14),
       dropdownColor: AppColors.surface,
       decoration: InputDecoration(

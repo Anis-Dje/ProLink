@@ -1,0 +1,61 @@
+# Dart / Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+/build/
+.fvm/
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Generated
+*.g.dart
+*.freezed.dart
+generated_plugin_registrant.dart
+
+# Platform-specific
+/ios/Pods/
+/ios/.symlinks/
+/ios/Flutter/App.framework
+/ios/Flutter/Flutter.framework
+/ios/Flutter/Flutter.podspec
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/ephemeral
+/ios/Flutter/flutter_export_environment.sh
+/ios/.generated/
+/ios/Runner.xcworkspace/xcuserdata/
+
+/android/.gradle/
+/android/captures/
+/android/gradlew
+/android/gradlew.bat
+/android/local.properties
+/android/**/GeneratedPluginRegistrant.java
+/android/key.properties
+/android/app/google-services.json
+
+/macos/Flutter/GeneratedPluginRegistrant.swift
+/macos/Flutter/ephemeral
+/macos/Runner/GoogleService-Info.plist
+
+/linux/flutter/ephemeral/
+/windows/flutter/ephemeral/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Firebase configs (should be generated per-developer by flutterfire)
+firebase.json
+.firebaserc
+GoogleService-Info.plist
+google-services.json

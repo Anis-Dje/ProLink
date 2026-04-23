@@ -1,0 +1,20 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    # Downgrade a handful of noisy lints to warnings so they don't
+    # break CI while still being visible in editor output.
+    invalid_annotation_target: ignore
+    unused_import: warning
+    unused_field: warning
+    unused_element: warning
+    deprecated_member_use: warning
+
+linter:
+  rules:
+    prefer_single_quotes: true
+    avoid_print: true
+    require_trailing_commas: false
+    use_super_parameters: true
+    prefer_const_constructors: true
+    prefer_const_literals_to_create_immutables: true

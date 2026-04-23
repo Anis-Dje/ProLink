@@ -167,7 +167,7 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
                       title: 'Sélectionner un Encadreur',
                       icon: Icons.supervisor_account_outlined,
                       child: DropdownButtonFormField<UserModel>(
-                        value: _selectedMentor,
+                        initialValue: _selectedMentor,
                         style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins'),
                         dropdownColor: AppColors.surface,
                         decoration: const InputDecoration(
@@ -186,7 +186,7 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
                       title: 'Département',
                       icon: Icons.business_outlined,
                       child: DropdownButtonFormField<String>(
-                        value: _selectedDepartment,
+                        initialValue: _selectedDepartment,
                         style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins'),
                         dropdownColor: AppColors.surface,
                         decoration: const InputDecoration(

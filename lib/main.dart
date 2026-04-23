@@ -42,6 +42,9 @@ import 'screens/intern/evaluations_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize Firebase. When running against an unconfigured
+  // firebase_options.dart, this will throw - tell the developer to run
+  // `flutterfire configure` in their clone.
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -74,6 +77,28 @@ class ProLinkApp extends StatelessWidget {
   }
 }
 
+/// Holds the currently-signed-in [UserModel] for the router. Extends
+/// [ChangeNotifier] so it can be passed as `refreshListenable` to GoRouter.
+class AuthStateNotifier extends ChangeNotifier {
+  UserModel? _user;
+  bool _loading = true;
+
+  UserModel? get user => _user;
+  bool get loading => _loading;
+  bool get isLoggedIn => _user != null;
+
+  void setUser(UserModel? user) {
+    _user = user;
+    _loading = false;
+    notifyListeners();
+  }
+
+  void setLoading() {
+    _loading = true;
+    notifyListeners();
+  }
+}
+
 class _AppWithRouter extends StatefulWidget {
   const _AppWithRouter();
 
@@ -82,8 +107,7 @@ class _AppWithRouter extends StatefulWidget {
 }
 
 class _AppWithRouterState extends State<_AppWithRouter> {
-  UserModel? _currentUserModel;
-  bool _loading = true;
+  final AuthStateNotifier _authNotifier = AuthStateNotifier();
 
   @override
   void initState() {
@@ -91,90 +115,122 @@ class _AppWithRouterState extends State<_AppWithRouter> {
     _listenToAuth();
   }
 
+  @override
+  void dispose() {
+    _authNotifier.dispose();
+    super.dispose();
+  }
+
   void _listenToAuth() {
     FirebaseAuth.instance.authStateChanges().listen((user) async {
       if (user == null) {
-        setState(() {
-          _currentUserModel = null;
-          _loading = false;
-        });
+        _authNotifier.setUser(null);
       } else {
-        final authService = context.read<AuthService>();
-        final userModel = await authService.getUserById(user.uid);
-        setState(() {
-          _currentUserModel = userModel;
-          _loading = false;
-        });
+        try {
+          final userModel =
+              await context.read<AuthService>().getUserById(user.uid);
+          _authNotifier.setUser(userModel);
+        } catch (_) {
+          _authNotifier.setUser(null);
+        }
       }
     });
   }
 
   late final GoRouter _router = GoRouter(
     initialLocation: '/login',
+    refreshListenable: _authNotifier,
     redirect: (context, state) {
-      if (_loading) return null;
+      if (_authNotifier.loading) return null;
 
-      final isLoggedIn = _currentUserModel != null;
-      final isOnAuth = state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register';
+      final currentUser = _authNotifier.user;
+      final isLoggedIn = currentUser != null;
+      final loc = state.matchedLocation;
+      final isOnAuth = loc == '/login' || loc == '/register';
 
-      if (!isLoggedIn && !isOnAuth) return '/login';
+      if (!isLoggedIn && !isOnAuth && loc != '/pending') return '/login';
       if (isLoggedIn && isOnAuth) {
-        return _getHomeRouteForUser(_currentUserModel!);
+        return _getHomeRouteForUser(currentUser);
       }
 
       if (isLoggedIn) {
-        final role = _currentUserModel!.role;
-        final loc = state.matchedLocation;
+        final role = currentUser.role;
 
-        if (role == UserRole.admin && loc == '/pending') return '/admin/dashboard';
+        if (role == UserRole.admin && loc == '/pending') {
+          return '/admin/dashboard';
+        }
 
-        if (role == UserRole.intern) {
-          // Check pending status via route
-          if (loc.startsWith('/admin') || loc.startsWith('/mentor')) {
-            return '/intern/dashboard';
-          }
+        // Prevent role cross-navigation.
+        if (role == UserRole.intern &&
+            (loc.startsWith('/admin') || loc.startsWith('/mentor'))) {
+          return '/intern/dashboard';
         }
-        if (role == UserRole.mentor) {
-          if (loc.startsWith('/admin') || loc.startsWith('/intern')) {
-            return '/mentor/dashboard';
-          }
+        if (role == UserRole.mentor &&
+            (loc.startsWith('/admin') || loc.startsWith('/intern'))) {
+          return '/mentor/dashboard';
         }
-        if (role == UserRole.admin) {
-          if (loc.startsWith('/mentor') || loc.startsWith('/intern')) {
-            return '/admin/dashboard';
-          }
+        if (role == UserRole.admin &&
+            (loc.startsWith('/mentor') || loc.startsWith('/intern'))) {
+          return '/admin/dashboard';
         }
       }
 
       return null;
     },
-    refreshListenable: _RouterNotifier(this),
     routes: [
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
-      GoRoute(path: '/pending', builder: (_, __) => const PendingApprovalScreen()),
+      GoRoute(
+          path: '/pending', builder: (_, __) => const PendingApprovalScreen()),
 
       // Admin routes
-      GoRoute(path: '/admin/dashboard', builder: (_, __) => const AdminDashboard()),
-      GoRoute(path: '/admin/interns', builder: (_, __) => const ManageInternsScreen()),
-      GoRoute(path: '/admin/assign', builder: (_, __) => const AssignInternScreen()),
-      GoRoute(path: '/admin/documents', builder: (_, __) => const UploadDocumentsScreen()),
-      GoRoute(path: '/admin/users', builder: (_, __) => const UserManagementScreen()),
+      GoRoute(
+          path: '/admin/dashboard', builder: (_, __) => const AdminDashboard()),
+      GoRoute(
+          path: '/admin/interns',
+          builder: (_, __) => const ManageInternsScreen()),
+      GoRoute(
+          path: '/admin/assign',
+          builder: (_, __) => const AssignInternScreen()),
+      GoRoute(
+          path: '/admin/documents',
+          builder: (_, __) => const UploadDocumentsScreen()),
+      GoRoute(
+          path: '/admin/users',
+          builder: (_, __) => const UserManagementScreen()),
 
       // Mentor routes
-      GoRoute(path: '/mentor/dashboard', builder: (_, __) => const MentorDashboard()),
-      GoRoute(path: '/mentor/interns', builder: (_, __) => const AssignedInternsScreen()),
-      GoRoute(path: '/mentor/evaluate', builder: (_, __) => const EvaluateInternScreen()),
-      GoRoute(path: '/mentor/attendance', builder: (_, __) => const AttendanceTrackingScreen()),
-      GoRoute(path: '/mentor/training', builder: (_, __) => const UploadTrainingScreen()),
+      GoRoute(
+          path: '/mentor/dashboard',
+          builder: (_, __) => const MentorDashboard()),
+      GoRoute(
+          path: '/mentor/interns',
+          builder: (_, __) => const AssignedInternsScreen()),
+      GoRoute(
+          path: '/mentor/evaluate',
+          builder: (_, __) => const EvaluateInternScreen()),
+      GoRoute(
+          path: '/mentor/attendance',
+          builder: (_, __) => const AttendanceTrackingScreen()),
+      GoRoute(
+          path: '/mentor/training',
+          builder: (_, __) => const UploadTrainingScreen()),
 
       // Intern routes
-      GoRoute(path: '/intern/dashboard', builder: (_, __) => const InternDashboard()),
-      GoRoute(path: '/intern/id-card', builder: (_, __) => const WorkIdCardScreen()),
-      GoRoute(path: '/intern/schedule', builder: (_, __) => const ScheduleScreen()),
-      GoRoute(path: '/intern/training', builder: (_, __) => const TrainingFilesScreen()),
-      GoRoute(path: '/intern/evaluations', builder: (_, __) => const EvaluationsScreen()),
+      GoRoute(
+          path: '/intern/dashboard',
+          builder: (_, __) => const InternDashboard()),
+      GoRoute(
+          path: '/intern/id-card',
+          builder: (_, __) => const WorkIdCardScreen()),
+      GoRoute(
+          path: '/intern/schedule', builder: (_, __) => const ScheduleScreen()),
+      GoRoute(
+          path: '/intern/training',
+          builder: (_, __) => const TrainingFilesScreen()),
+      GoRoute(
+          path: '/intern/evaluations',
+          builder: (_, __) => const EvaluationsScreen()),
     ],
   );
 
@@ -197,12 +253,5 @@ class _AppWithRouterState extends State<_AppWithRouter> {
       debugShowCheckedModeBanner: false,
       routerConfig: _router,
     );
-  }
-}
-
-class _RouterNotifier extends ChangeNotifier {
-  final _AppWithRouterState _state;
-  _RouterNotifier(this._state) {
-    _state.addListener(notifyListeners);
   }
 }
