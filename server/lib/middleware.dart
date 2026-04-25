@@ -58,8 +58,13 @@ Middleware errorHandler() {
       try {
         return await inner(request);
       } catch (e, st) {
+        // Full details go to the server logs; the client receives a generic
+        // message so we don't leak SQL strings, table names, file paths, etc.
         print('[error] ${request.method} ${request.requestedUri}: $e\n$st');
-        return _json(500, {'error': 'internal_error', 'message': '$e'});
+        return _json(500, {
+          'error': 'internal_error',
+          'message': 'An unexpected error occurred',
+        });
       }
     };
   };
