@@ -62,14 +62,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {
-      String? photoUrl;
-      if (_profilePhoto != null) {
-        final storageService = context.read<StorageService>();
-        photoUrl = await storageService.uploadProfilePhoto('temp', _profilePhoto!);
-      }
-
+      // The /upload endpoint requires a JWT, so we must register first to
+      // obtain one. Upload the photo and patch the user record afterwards.
       final authService = context.read<AuthService>();
-      await authService.registerIntern(
+      final user = await authService.registerIntern(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         fullName: _fullNameController.text.trim(),
@@ -78,8 +74,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
         university: _selectedUniversity,
         specialization: _specializationController.text.trim(),
         department: _selectedDepartment,
-        profilePhotoUrl: photoUrl,
       );
+
+      if (_profilePhoto != null) {
+        try {
+          final storageService = context.read<StorageService>();
+          final photoUrl =
+              await storageService.uploadProfilePhoto(user.id, _profilePhoto!);
+          await authService.updateProfile(
+            userId: user.id,
+            profilePhotoUrl: photoUrl,
+          );
+        } catch (_) {
+          // The account is already created; surface the photo failure but
+          // don't block the user on the signup screen.
+          if (mounted) {
+            AppUtils.showSnackBar(
+              context,
+              'Compte créé, mais la photo n\'a pas pu être envoyée.',
+              isError: true,
+            );
+          }
+        }
+      }
 
       if (!mounted) return;
       // After successful intern signup the JWT is issued, but the account is

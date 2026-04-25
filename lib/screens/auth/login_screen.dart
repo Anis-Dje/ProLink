@@ -85,6 +85,15 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         AppUtils.showSnackBar(context, 'Email de réinitialisation envoyé');
       }
+    } on UnimplementedError {
+      if (mounted) {
+        AppUtils.showSnackBar(
+          context,
+          'Cette fonctionnalité n\'est pas encore disponible. '
+          'Contactez votre administrateur.',
+          isError: true,
+        );
+      }
     } catch (e) {
       if (mounted) {
         AppUtils.showSnackBar(context, 'Erreur lors de l\'envoi', isError: true);
