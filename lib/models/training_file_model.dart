@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class TrainingFileModel {
   final String id;
   final String title;
@@ -23,31 +21,31 @@ class TrainingFileModel {
     required this.tags,
   });
 
-  factory TrainingFileModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory TrainingFileModel.fromJson(Map<String, dynamic> json) {
+    final rawTags = (json['tags'] as List?) ?? const [];
     return TrainingFileModel(
-      id: doc.id,
-      title: data['title'] ?? '',
-      description: data['description'] ?? '',
-      fileUrl: data['fileUrl'] ?? '',
-      fileType: data['fileType'] ?? 'pdf',
-      uploadedBy: data['uploadedBy'] ?? '',
-      uploadDate: (data['uploadDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      departmentId: data['departmentId'],
-      tags: List<String>.from(data['tags'] ?? []),
+      id: json['id'] as String,
+      title: json['title'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      fileUrl: json['fileUrl'] as String? ?? '',
+      fileType: json['fileType'] as String? ?? 'pdf',
+      uploadedBy: json['uploadedBy'] as String? ?? '',
+      uploadDate: DateTime.tryParse(json['uploadDate'] as String? ?? '') ??
+          DateTime.now(),
+      departmentId: json['departmentId'] as String?,
+      tags: rawTags.map((e) => e.toString()).toList(),
     );
   }
 
-  Map<String, dynamic> toFirestore() {
-    return {
-      'title': title,
-      'description': description,
-      'fileUrl': fileUrl,
-      'fileType': fileType,
-      'uploadedBy': uploadedBy,
-      'uploadDate': Timestamp.fromDate(uploadDate),
-      'departmentId': departmentId,
-      'tags': tags,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'description': description,
+        'fileUrl': fileUrl,
+        'fileType': fileType,
+        'uploadedBy': uploadedBy,
+        'uploadDate': uploadDate.toUtc().toIso8601String(),
+        'departmentId': departmentId,
+        'tags': tags,
+      };
 }

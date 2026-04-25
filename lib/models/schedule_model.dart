@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class ScheduleModel {
   final String id;
   final String title;
@@ -21,29 +19,28 @@ class ScheduleModel {
     required this.weekLabel,
   });
 
-  factory ScheduleModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory ScheduleModel.fromJson(Map<String, dynamic> json) {
     return ScheduleModel(
-      id: doc.id,
-      title: data['title'] ?? '',
-      description: data['description'] ?? '',
-      fileUrl: data['fileUrl'] ?? '',
-      uploadedBy: data['uploadedBy'] ?? '',
-      uploadDate: (data['uploadDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      departmentId: data['departmentId'],
-      weekLabel: data['weekLabel'] ?? '',
+      id: json['id'] as String,
+      title: json['title'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      fileUrl: json['fileUrl'] as String? ?? '',
+      uploadedBy: json['uploadedBy'] as String? ?? '',
+      uploadDate: DateTime.tryParse(json['uploadDate'] as String? ?? '') ??
+          DateTime.now(),
+      departmentId: json['departmentId'] as String?,
+      weekLabel: json['weekLabel'] as String? ?? '',
     );
   }
 
-  Map<String, dynamic> toFirestore() {
-    return {
-      'title': title,
-      'description': description,
-      'fileUrl': fileUrl,
-      'uploadedBy': uploadedBy,
-      'uploadDate': Timestamp.fromDate(uploadDate),
-      'departmentId': departmentId,
-      'weekLabel': weekLabel,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'description': description,
+        'fileUrl': fileUrl,
+        'uploadedBy': uploadedBy,
+        'uploadDate': uploadDate.toUtc().toIso8601String(),
+        'departmentId': departmentId,
+        'weekLabel': weekLabel,
+      };
 }

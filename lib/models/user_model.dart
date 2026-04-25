@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 enum UserRole { admin, mentor, intern }
 
 extension UserRoleExtension on UserRole {
@@ -14,14 +12,13 @@ extension UserRoleExtension on UserRole {
     }
   }
 
-  static UserRole fromString(String value) {
+  static UserRole fromString(String? value) {
     switch (value) {
       case 'admin':
         return UserRole.admin;
       case 'mentor':
         return UserRole.mentor;
       case 'intern':
-        return UserRole.intern;
       default:
         return UserRole.intern;
     }
@@ -49,31 +46,30 @@ class UserModel {
     required this.isActive,
   });
 
-  factory UserModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: doc.id,
-      email: data['email'] ?? '',
-      fullName: data['fullName'] ?? '',
-      phone: data['phone'] ?? '',
-      role: UserRoleExtension.fromString(data['role'] ?? 'intern'),
-      profilePhotoUrl: data['profilePhotoUrl'],
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      isActive: data['isActive'] ?? true,
+      id: json['id'] as String,
+      email: json['email'] as String? ?? '',
+      fullName: json['fullName'] as String? ?? '',
+      phone: json['phone'] as String? ?? '',
+      role: UserRoleExtension.fromString(json['role'] as String?),
+      profilePhotoUrl: json['profilePhotoUrl'] as String?,
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
+      isActive: json['isActive'] as bool? ?? true,
     );
   }
 
-  Map<String, dynamic> toFirestore() {
-    return {
-      'email': email,
-      'fullName': fullName,
-      'phone': phone,
-      'role': role.value,
-      'profilePhotoUrl': profilePhotoUrl,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'isActive': isActive,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'email': email,
+        'fullName': fullName,
+        'phone': phone,
+        'role': role.value,
+        'profilePhotoUrl': profilePhotoUrl,
+        'createdAt': createdAt.toUtc().toIso8601String(),
+        'isActive': isActive,
+      };
 
   UserModel copyWith({
     String? id,

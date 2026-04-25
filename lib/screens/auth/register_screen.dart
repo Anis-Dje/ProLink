@@ -62,12 +62,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {
-      String? photoUrl;
-      if (_profilePhoto != null) {
-        final storageService = context.read<StorageService>();
-        photoUrl = await storageService.uploadProfilePhoto('temp', _profilePhoto!);
-      }
-
+      // The /upload endpoint requires a JWT, so we must register first to
+      // obtain one. Upload the photo and patch the user record afterwards.
       final authService = context.read<AuthService>();
       final user = await authService.registerIntern(
         email: _emailController.text.trim(),
@@ -78,19 +74,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
         university: _selectedUniversity,
         specialization: _specializationController.text.trim(),
         department: _selectedDepartment,
-        profilePhotoUrl: photoUrl,
       );
 
-      if (!mounted) return;
-      if (user != null) {
-        context.go('/pending');
+      if (_profilePhoto != null) {
+        try {
+          final storageService = context.read<StorageService>();
+          final photoUrl =
+              await storageService.uploadProfilePhoto(user.id, _profilePhoto!);
+          await authService.updateProfile(
+            userId: user.id,
+            profilePhotoUrl: photoUrl,
+          );
+        } catch (_) {
+          // The account is already created; surface the photo failure but
+          // don't block the user on the signup screen.
+          if (mounted) {
+            AppUtils.showSnackBar(
+              context,
+              'Compte créé, mais la photo n\'a pas pu être envoyée.',
+              isError: true,
+            );
+          }
+        }
       }
+
+      if (!mounted) return;
+      // After successful intern signup the JWT is issued, but the account is
+      // pending admin approval; route to the holding screen until approved.
+      context.go('/pending');
     } catch (e) {
       if (mounted) {
-        String msg = e.toString();
-        if (msg.contains('email-already-in-use')) {
+        final raw = e.toString();
+        String msg;
+        if (raw.contains('email_in_use') ||
+            raw.contains('Email already registered')) {
           msg = 'Cet email est déjà utilisé';
-        } else if (msg.contains('weak-password')) {
+        } else if (raw.contains('>=6 chars') ||
+            raw.contains('weak-password')) {
           msg = 'Mot de passe trop faible';
         } else {
           msg = 'Erreur lors de l\'inscription. Réessayez.';
