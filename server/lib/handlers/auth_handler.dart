@@ -41,6 +41,7 @@ class AuthHandler {
     final university = (body['university'] as String?)?.trim() ?? '';
     final specialization = (body['specialization'] as String?)?.trim() ?? '';
     final department = (body['department'] as String?)?.trim() ?? '';
+    final profilePhotoUrl = (body['profilePhotoUrl'] as String?)?.trim();
 
     if (email == null || password == null || fullName == null ||
         studentId == null || password.length < 6) {
@@ -55,18 +56,25 @@ class AuthHandler {
       final result = await pool.runTx<Map<String, dynamic>>((session) async {
         final userInsert = await session.execute(
           Sql.named('''
-            INSERT INTO users (email, password_hash, full_name, phone, role)
-            VALUES (@email, @hash, @fullName, @phone, 'intern')
-            RETURNING id
+            INSERT INTO users (
+              email, password_hash, full_name, phone, role, profile_photo_url
+            )
+            VALUES (
+              @email, @hash, @fullName, @phone, 'intern', @photoUrl
+            )
+            RETURNING id, email, full_name, role, is_active,
+                      profile_photo_url, phone, created_at
           '''),
           parameters: {
             'email': email,
             'hash': hash,
             'fullName': fullName,
             'phone': phone,
+            'photoUrl': profilePhotoUrl,
           },
         );
-        final userId = userInsert.first[0] as String;
+        final userRow = userInsert.first.toColumnMap();
+        final userId = userRow['id'] as String;
         await session.execute(
           Sql.named('''
             INSERT INTO interns (
@@ -84,19 +92,15 @@ class AuthHandler {
           },
         );
         return {
-          'userId': userId,
+          'user': userRow,
           'token': auth.issueToken(
               userId: userId, email: email, role: 'intern'),
         };
       });
       return created({
         'token': result['token'],
-        'user': {
-          'id': result['userId'],
-          'email': email,
-          'fullName': fullName,
-          'role': 'intern',
-        },
+        'user': _userToJson(
+            (result['user'] as Map).cast<String, dynamic>()),
       });
     } on ServerException catch (e) {
       // Postgres unique violation.
@@ -123,7 +127,7 @@ class AuthHandler {
     final rows = await pool.execute(
       Sql.named('''
         SELECT id, email, password_hash, full_name, role, is_active,
-               profile_photo_url, phone
+               profile_photo_url, phone, created_at
           FROM users WHERE email = @email
       '''),
       parameters: {'email': email},

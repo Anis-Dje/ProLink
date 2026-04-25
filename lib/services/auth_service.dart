@@ -68,6 +68,7 @@ class AuthService extends ChangeNotifier {
       'university': university,
       'specialization': specialization,
       'department': department,
+      if (profilePhotoUrl != null) 'profilePhotoUrl': profilePhotoUrl,
     });
     await _api.setToken(res['token'] as String);
     final user =

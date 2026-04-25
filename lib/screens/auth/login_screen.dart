@@ -63,11 +63,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   String _getErrorMessage(String error) {
-    if (error.contains('user-not-found') || error.contains('wrong-password') || error.contains('invalid-credential')) {
+    if (error.contains('invalid_credentials')) {
       return 'Email ou mot de passe incorrect';
-    } else if (error.contains('user-disabled')) {
+    } else if (error.contains('account_disabled')) {
       return 'Ce compte a été désactivé';
-    } else if (error.contains('network-request-failed')) {
+    } else if (error.contains('SocketException') ||
+        error.contains('Failed host lookup') ||
+        error.contains('Connection refused')) {
       return 'Erreur de connexion réseau';
     }
     return 'Une erreur est survenue. Réessayez.';
