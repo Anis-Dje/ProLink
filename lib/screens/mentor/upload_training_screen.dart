@@ -143,7 +143,7 @@ class _UploadTrainingScreenState extends State<UploadTrainingScreen> {
     setState(() => _uploading = true);
     try {
       final mentorId =
-          context.read<AuthService>().currentFirebaseUser?.uid ?? 'unknown';
+          context.read<AuthService>().currentUser?.id ?? 'unknown';
       final file = File(result.files.single.path!);
       final url = await context
           .read<StorageService>()

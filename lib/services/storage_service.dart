@@ -1,76 +1,43 @@
 import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:path/path.dart' as p;
-import '../core/constants/app_constants.dart';
 
+import 'api_client.dart';
+
+/// Uploads files to the Pro-Link backend. The backend stores them on local
+/// disk and serves them at `/files/...`. The returned URL is the public URL
+/// pointing at the served file.
 class StorageService {
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  StorageService(this._api);
+  final ApiClient _api;
 
-  Future<String> uploadProfilePhoto(String userId, File image) async {
-    final ext = p.extension(image.path);
-    final ref = _storage.ref().child(
-          '${AppConstants.profilePhotosPath}/$userId$ext',
-        );
-    final task = await ref.putFile(image);
-    return task.ref.getDownloadURL();
+  Future<String> uploadProfilePhoto(String userId, File image) {
+    return _api.uploadFile(image);
   }
 
   Future<String> uploadTrainingFile(
     String mentorId,
     File file,
     String title,
-  ) async {
-    final ext = p.extension(file.path);
-    final fileName = '${DateTime.now().millisecondsSinceEpoch}_$title$ext';
-    final ref = _storage.ref().child(
-          '${AppConstants.trainingFilesPath}/$mentorId/$fileName',
-        );
-    final task = await ref.putFile(file);
-    return task.ref.getDownloadURL();
+  ) {
+    return _api.uploadFile(file);
   }
 
   Future<String> uploadSchedule(
     String adminId,
     File file,
     String weekLabel,
-  ) async {
-    final ext = p.extension(file.path);
-    final fileName = '${DateTime.now().millisecondsSinceEpoch}_$weekLabel$ext';
-    final ref = _storage.ref().child(
-          '${AppConstants.schedulesPath}/$adminId/$fileName',
-        );
-    final task = await ref.putFile(file);
-    return task.ref.getDownloadURL();
+  ) {
+    return _api.uploadFile(file);
   }
 
   Future<String> uploadPolicyDocument(
     String adminId,
     File file,
     String title,
-  ) async {
-    final ext = p.extension(file.path);
-    final fileName = '${DateTime.now().millisecondsSinceEpoch}_$title$ext';
-    final ref = _storage.ref().child(
-          '${AppConstants.policiesPath}/$adminId/$fileName',
-        );
-    final task = await ref.putFile(file);
-    return task.ref.getDownloadURL();
-  }
-
-  Future<void> deleteFile(String fileUrl) async {
-    try {
-      final ref = _storage.refFromURL(fileUrl);
-      await ref.delete();
-    } catch (_) {
-      // File may already be deleted or URL invalid
-    }
-  }
-
-  UploadTask uploadFileWithProgress(
-    String path,
-    File file,
   ) {
-    final ref = _storage.ref().child(path);
-    return ref.putFile(file);
+    return _api.uploadFile(file);
   }
+
+  /// File deletion is not yet supported by the new backend. No-op so callers
+  /// don't break.
+  Future<void> deleteFile(String fileUrl) async {}
 }

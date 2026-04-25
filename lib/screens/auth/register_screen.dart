@@ -69,7 +69,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
 
       final authService = context.read<AuthService>();
-      final user = await authService.registerIntern(
+      await authService.registerIntern(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         fullName: _fullNameController.text.trim(),
@@ -82,15 +82,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (!mounted) return;
-      if (user != null) {
-        context.go('/pending');
-      }
+      // After successful intern signup the JWT is issued, but the account is
+      // pending admin approval; route to the holding screen until approved.
+      context.go('/pending');
     } catch (e) {
       if (mounted) {
-        String msg = e.toString();
-        if (msg.contains('email-already-in-use')) {
+        final raw = e.toString();
+        String msg;
+        if (raw.contains('email_in_use') ||
+            raw.contains('Email already registered')) {
           msg = 'Cet email est déjà utilisé';
-        } else if (msg.contains('weak-password')) {
+        } else if (raw.contains('>=6 chars') ||
+            raw.contains('weak-password')) {
           msg = 'Mot de passe trop faible';
         } else {
           msg = 'Erreur lors de l\'inscription. Réessayez.';

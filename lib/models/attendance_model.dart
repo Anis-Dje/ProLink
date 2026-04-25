@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class AttendanceModel {
   final String id;
   final String internId;
@@ -17,27 +15,26 @@ class AttendanceModel {
     this.note,
   });
 
-  factory AttendanceModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory AttendanceModel.fromJson(Map<String, dynamic> json) {
     return AttendanceModel(
-      id: doc.id,
-      internId: data['internId'] ?? '',
-      mentorId: data['mentorId'] ?? '',
-      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      status: data['status'] ?? 'absent',
-      note: data['note'],
+      id: json['id'] as String,
+      internId: json['internId'] as String? ?? '',
+      mentorId: json['mentorId'] as String? ?? '',
+      date: DateTime.tryParse(json['date'] as String? ?? '') ??
+          DateTime.now(),
+      status: json['status'] as String? ?? 'absent',
+      note: (json['notes'] ?? json['note']) as String?,
     );
   }
 
-  Map<String, dynamic> toFirestore() {
-    return {
-      'internId': internId,
-      'mentorId': mentorId,
-      'date': Timestamp.fromDate(date),
-      'status': status,
-      'note': note,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'internId': internId,
+        'mentorId': mentorId,
+        'date': date.toUtc().toIso8601String(),
+        'status': status,
+        'notes': note,
+      };
 
   AttendanceModel copyWith({
     String? id,

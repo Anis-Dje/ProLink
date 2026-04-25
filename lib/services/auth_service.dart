@@ -1,32 +1,54 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../core/constants/app_constants.dart';
+import 'package:flutter/foundation.dart';
+
 import '../models/user_model.dart';
-import '../models/intern_model.dart';
+import 'api_client.dart';
 
-class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+/// Authentication state holder + REST client. Acts as a [ChangeNotifier] so
+/// the router can listen for sign-in / sign-out transitions.
+class AuthService extends ChangeNotifier {
+  AuthService(this._api);
+  final ApiClient _api;
 
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  UserModel? _currentUser;
+  bool _initializing = true;
 
-  User? get currentFirebaseUser => _auth.currentUser;
+  UserModel? get currentUser => _currentUser;
+  bool get isLoggedIn => _currentUser != null;
+  bool get initializing => _initializing;
 
-  Future<UserModel?> login(String email, String password) async {
-    final credential = await _auth.signInWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
-    if (credential.user == null) return null;
-    final userModel = await getUserById(credential.user!.uid);
-    if (userModel != null) {
-      await _saveUserPrefs(userModel);
+  /// Loads the persisted JWT and resolves the current user from `/auth/me`.
+  /// Call once at app start.
+  Future<void> init() async {
+    await _api.init();
+    if (_api.isAuthenticated) {
+      try {
+        final res = await _api.get('/auth/me');
+        _currentUser = UserModel.fromJson(
+            (res['user'] as Map).cast<String, dynamic>());
+      } catch (_) {
+        // Token invalid/expired -> wipe.
+        await _api.setToken(null);
+        _currentUser = null;
+      }
     }
-    return userModel;
+    _initializing = false;
+    notifyListeners();
   }
 
-  Future<UserModel?> registerIntern({
+  Future<UserModel> login(String email, String password) async {
+    final res = await _api.post('/auth/login', body: {
+      'email': email.trim(),
+      'password': password,
+    });
+    await _api.setToken(res['token'] as String);
+    final user =
+        UserModel.fromJson((res['user'] as Map).cast<String, dynamic>());
+    _currentUser = user;
+    notifyListeners();
+    return user;
+  }
+
+  Future<UserModel> registerIntern({
     required String email,
     required String password,
     required String fullName,
@@ -37,111 +59,67 @@ class AuthService {
     required String department,
     String? profilePhotoUrl,
   }) async {
-    final credential = await _auth.createUserWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
-    if (credential.user == null) return null;
-
-    final uid = credential.user!.uid;
-    final now = DateTime.now();
-
-    final userModel = UserModel(
-      id: uid,
-      email: email.trim(),
-      fullName: fullName,
-      phone: phone,
-      role: UserRole.intern,
-      profilePhotoUrl: profilePhotoUrl,
-      createdAt: now,
-      isActive: true,
-    );
-
-    final internModel = InternModel(
-      id: uid,
-      userId: uid,
-      fullName: fullName,
-      email: email.trim(),
-      phone: phone,
-      studentId: studentId,
-      department: department,
-      profilePhotoUrl: profilePhotoUrl,
-      status: AppConstants.statusPending,
-      registrationDate: now,
-      university: university,
-      specialization: specialization,
-    );
-
-    final batch = _firestore.batch();
-    batch.set(
-      _firestore.collection(AppConstants.usersCollection).doc(uid),
-      userModel.toFirestore(),
-    );
-    batch.set(
-      _firestore.collection(AppConstants.internsCollection).doc(uid),
-      internModel.toFirestore(),
-    );
-    await batch.commit();
-
-    await _saveUserPrefs(userModel);
-    return userModel;
+    final res = await _api.post('/auth/register', body: {
+      'email': email.trim(),
+      'password': password,
+      'fullName': fullName,
+      'phone': phone,
+      'studentId': studentId,
+      'university': university,
+      'specialization': specialization,
+      'department': department,
+      if (profilePhotoUrl != null) 'profilePhotoUrl': profilePhotoUrl,
+    });
+    await _api.setToken(res['token'] as String);
+    final user =
+        UserModel.fromJson((res['user'] as Map).cast<String, dynamic>());
+    _currentUser = user;
+    notifyListeners();
+    return user;
   }
 
-  Future<UserModel?> createMentorOrAdmin({
+  /// Admin-only: provision a mentor or admin user. Does not sign the caller in
+  /// as the new user.
+  Future<UserModel> createMentorOrAdmin({
     required String email,
     required String password,
     required String fullName,
     required String phone,
     required UserRole role,
   }) async {
-    final credential = await _auth.createUserWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
-    if (credential.user == null) return null;
-
-    final uid = credential.user!.uid;
-    final userModel = UserModel(
-      id: uid,
-      email: email.trim(),
-      fullName: fullName,
-      phone: phone,
-      role: role,
-      createdAt: DateTime.now(),
-      isActive: true,
-    );
-
-    await _firestore
-        .collection(AppConstants.usersCollection)
-        .doc(uid)
-        .set(userModel.toFirestore());
-
-    return userModel;
+    final res = await _api.post('/users/', body: {
+      'email': email.trim(),
+      'password': password,
+      'fullName': fullName,
+      'phone': phone,
+      'role': role.value,
+    });
+    return UserModel.fromJson((res['user'] as Map).cast<String, dynamic>());
   }
 
   Future<void> logout() async {
-    await _auth.signOut();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    await _api.setToken(null);
+    _currentUser = null;
+    notifyListeners();
   }
 
-  Future<void> resetPassword(String email) async {
-    await _auth.sendPasswordResetEmail(email: email.trim());
+  /// Compatibility shim for the legacy Firestore-era code: returns the
+  /// in-memory current user without hitting the network.
+  Future<UserModel?> getCurrentUser() async => _currentUser;
+
+  Future<UserModel?> refreshCurrentUser() async {
+    if (!_api.isAuthenticated) return null;
+    final res = await _api.get('/auth/me');
+    final user =
+        UserModel.fromJson((res['user'] as Map).cast<String, dynamic>());
+    _currentUser = user;
+    notifyListeners();
+    return user;
   }
 
-  Future<UserModel?> getUserById(String uid) async {
-    final doc = await _firestore
-        .collection(AppConstants.usersCollection)
-        .doc(uid)
-        .get();
-    if (!doc.exists) return null;
-    return UserModel.fromFirestore(doc);
-  }
-
-  Future<UserModel?> getCurrentUser() async {
-    final firebaseUser = _auth.currentUser;
-    if (firebaseUser == null) return null;
-    return getUserById(firebaseUser.uid);
+  Future<UserModel?> getUserById(String id) async {
+    final res = await _api.get('/users/$id');
+    return UserModel.fromJson((res['user'] as Map).cast<String, dynamic>());
   }
 
   Future<void> updateProfile({
@@ -150,48 +128,22 @@ class AuthService {
     String? phone,
     String? profilePhotoUrl,
   }) async {
-    final updates = <String, dynamic>{};
-    if (fullName != null) updates['fullName'] = fullName;
-    if (phone != null) updates['phone'] = phone;
-    if (profilePhotoUrl != null) updates['profilePhotoUrl'] = profilePhotoUrl;
-    if (updates.isEmpty) return;
-    await _firestore
-        .collection(AppConstants.usersCollection)
-        .doc(userId)
-        .update(updates);
+    final body = <String, dynamic>{};
+    if (fullName != null) body['fullName'] = fullName;
+    if (phone != null) body['phone'] = phone;
+    if (profilePhotoUrl != null) body['profilePhotoUrl'] = profilePhotoUrl;
+    if (body.isEmpty) return;
+    await _api.patch('/users/$userId', body: body);
+    if (_currentUser?.id == userId) {
+      await refreshCurrentUser();
+    }
   }
 
-  Future<void> updateEmail(String newEmail, String password) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-    final credential = EmailAuthProvider.credential(
-      email: user.email!,
-      password: password,
+  /// The new backend doesn't yet ship password reset; surface a clear error
+  /// so callers don't silently swallow the case.
+  Future<void> resetPassword(String email) {
+    throw UnimplementedError(
+      'Password reset is not implemented on the new backend yet.',
     );
-    await user.reauthenticateWithCredential(credential);
-    await user.verifyBeforeUpdateEmail(newEmail);
-  }
-
-  Future<void> updatePassword(String oldPassword, String newPassword) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-    final credential = EmailAuthProvider.credential(
-      email: user.email!,
-      password: oldPassword,
-    );
-    await user.reauthenticateWithCredential(credential);
-    await user.updatePassword(newPassword);
-  }
-
-  Future<void> _saveUserPrefs(UserModel user) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(AppConstants.prefUserRole, user.role.value);
-    await prefs.setString(AppConstants.prefUserId, user.id);
-    await prefs.setString(AppConstants.prefUserEmail, user.email);
-  }
-
-  Future<String?> getSavedRole() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(AppConstants.prefUserRole);
   }
 }

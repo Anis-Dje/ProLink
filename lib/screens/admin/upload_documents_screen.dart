@@ -179,7 +179,7 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
     setState(() => _uploading = true);
     try {
       final adminId =
-          context.read<AuthService>().currentFirebaseUser?.uid ?? 'unknown';
+          context.read<AuthService>().currentUser?.id ?? 'unknown';
       final file = File(result.files.single.path!);
       final url = await context
           .read<StorageService>()
@@ -222,7 +222,7 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
     setState(() => _uploading = true);
     try {
       final adminId =
-          context.read<AuthService>().currentFirebaseUser?.uid ?? 'unknown';
+          context.read<AuthService>().currentUser?.id ?? 'unknown';
       final file = File(result.files.single.path!);
       final url = await context
           .read<StorageService>()
