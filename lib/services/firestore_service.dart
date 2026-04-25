@@ -1,124 +1,118 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants/app_constants.dart';
-import '../models/user_model.dart';
-import '../models/intern_model.dart';
+import '../models/attendance_model.dart';
 import '../models/department_model.dart';
 import '../models/evaluation_model.dart';
-import '../models/attendance_model.dart';
+import '../models/intern_model.dart';
 import '../models/schedule_model.dart';
 import '../models/training_file_model.dart';
+import '../models/user_model.dart';
+import 'api_client.dart';
 
+/// Wrapper around the Pro-Link REST API. Named `FirestoreService` for legacy
+/// reasons (the original implementation used Firestore); now backed by a
+/// custom Dart shelf backend talking to Neon Postgres.
 class FirestoreService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  FirestoreService(this._api);
+  final ApiClient _api;
 
   // ─── Users ────────────────────────────────────────────────────
 
   Future<List<UserModel>> getAllUsers() async {
-    final snap = await _db.collection(AppConstants.usersCollection).get();
-    return snap.docs.map(UserModel.fromFirestore).toList();
+    final res = await _api.get('/users/');
+    return (res['users'] as List)
+        .map((e) => UserModel.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
   }
 
   Future<List<UserModel>> getUsersByRole(String role) async {
-    final snap = await _db
-        .collection(AppConstants.usersCollection)
-        .where('role', isEqualTo: role)
-        .get();
-    return snap.docs.map(UserModel.fromFirestore).toList();
+    final res = await _api.get('/users/', query: {'role': role});
+    return (res['users'] as List)
+        .map((e) => UserModel.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
   }
 
   Future<UserModel?> getUserById(String id) async {
-    final doc = await _db.collection(AppConstants.usersCollection).doc(id).get();
-    if (!doc.exists) return null;
-    return UserModel.fromFirestore(doc);
+    try {
+      final res = await _api.get('/users/$id');
+      return UserModel.fromJson((res['user'] as Map).cast<String, dynamic>());
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) return null;
+      rethrow;
+    }
   }
 
   Future<void> updateUser(String userId, Map<String, dynamic> data) async {
-    await _db.collection(AppConstants.usersCollection).doc(userId).update(data);
+    await _api.patch('/users/$userId', body: data);
   }
 
   Future<void> setUserActiveStatus(String userId, bool isActive) async {
-    await _db
-        .collection(AppConstants.usersCollection)
-        .doc(userId)
-        .update({'isActive': isActive});
+    await _api.post('/users/$userId/active', body: {'isActive': isActive});
   }
 
   // ─── Interns ──────────────────────────────────────────────────
 
   Future<List<InternModel>> getAllInterns() async {
-    final snap = await _db.collection(AppConstants.internsCollection).get();
-    return snap.docs.map(InternModel.fromFirestore).toList();
+    final res = await _api.get('/interns/');
+    return _internsFrom(res);
   }
 
-  Future<List<InternModel>> getPendingInterns() async {
-    final snap = await _db
-        .collection(AppConstants.internsCollection)
-        .where('status', isEqualTo: AppConstants.statusPending)
-        .orderBy('registrationDate', descending: true)
-        .get();
-    return snap.docs.map(InternModel.fromFirestore).toList();
+  Future<List<InternModel>> getPendingInterns() {
+    return getInternsByStatus(AppConstants.statusPending);
   }
 
   Future<List<InternModel>> getInternsByStatus(String status) async {
-    final snap = await _db
-        .collection(AppConstants.internsCollection)
-        .where('status', isEqualTo: status)
-        .get();
-    return snap.docs.map(InternModel.fromFirestore).toList();
+    final res = await _api.get('/interns/', query: {'status': status});
+    return _internsFrom(res);
   }
 
   Future<List<InternModel>> getInternsByMentor(String mentorId) async {
-    final snap = await _db
-        .collection(AppConstants.internsCollection)
-        .where('mentorId', isEqualTo: mentorId)
-        .get();
-    return snap.docs.map(InternModel.fromFirestore).toList();
+    final res = await _api.get('/interns/', query: {'mentorId': mentorId});
+    return _internsFrom(res);
   }
 
   Future<List<InternModel>> getInternsByDepartment(String department) async {
-    final snap = await _db
-        .collection(AppConstants.internsCollection)
-        .where('department', isEqualTo: department)
-        .get();
-    return snap.docs.map(InternModel.fromFirestore).toList();
+    final all = await getAllInterns();
+    return all.where((i) => i.department == department).toList();
   }
 
   Future<InternModel?> getInternById(String id) async {
-    final doc = await _db.collection(AppConstants.internsCollection).doc(id).get();
-    if (!doc.exists) return null;
-    return InternModel.fromFirestore(doc);
+    try {
+      final res = await _api.get('/interns/$id');
+      return InternModel.fromJson(
+          (res['intern'] as Map).cast<String, dynamic>());
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) return null;
+      rethrow;
+    }
   }
 
   Future<InternModel?> getInternByUserId(String userId) async {
-    final snap = await _db
-        .collection(AppConstants.internsCollection)
-        .where('userId', isEqualTo: userId)
-        .limit(1)
-        .get();
-    if (snap.docs.isEmpty) return null;
-    return InternModel.fromFirestore(snap.docs.first);
+    try {
+      final res = await _api.get('/interns/by-user/$userId');
+      return InternModel.fromJson(
+          (res['intern'] as Map).cast<String, dynamic>());
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) return null;
+      rethrow;
+    }
   }
 
-  Future<void> approveIntern(String internId, {DateTime? startDate, DateTime? endDate}) async {
-    final updates = <String, dynamic>{
-      'status': AppConstants.statusActive,
-    };
-    if (startDate != null) updates['startDate'] = Timestamp.fromDate(startDate);
-    if (endDate != null) updates['endDate'] = Timestamp.fromDate(endDate);
-    await _db.collection(AppConstants.internsCollection).doc(internId).update(updates);
+  Future<void> approveIntern(String internId,
+      {DateTime? startDate, DateTime? endDate}) async {
+    await _api.post('/interns/$internId/approve', body: {
+      if (startDate != null) 'startDate': startDate.toUtc().toIso8601String(),
+      if (endDate != null) 'endDate': endDate.toUtc().toIso8601String(),
+    });
   }
 
   Future<void> rejectIntern(String internId, {String? reason}) async {
-    await _db.collection(AppConstants.internsCollection).doc(internId).update({
-      'status': AppConstants.statusRejected,
-      if (reason != null) 'rejectionReason': reason,
+    await _api.post('/interns/$internId/reject', body: {
+      if (reason != null) 'reason': reason,
     });
   }
 
   Future<void> updateInternStatus(String internId, String status) async {
-    await _db.collection(AppConstants.internsCollection).doc(internId).update({
-      'status': status,
-    });
+    await _api.patch('/interns/$internId', body: {'status': status});
   }
 
   Future<void> assignInternToMentor(
@@ -126,91 +120,96 @@ class FirestoreService {
     String mentorId,
     String department,
   ) async {
-    await _db.collection(AppConstants.internsCollection).doc(internId).update({
+    await _api.post('/interns/$internId/assign', body: {
       'mentorId': mentorId,
       'department': department,
     });
   }
 
   Future<List<InternModel>> searchInterns(String query) async {
-    final all = await getAllInterns();
-    final q = query.toLowerCase();
-    return all.where((i) {
-      return i.fullName.toLowerCase().contains(q) ||
-          i.studentId.toLowerCase().contains(q) ||
-          i.email.toLowerCase().contains(q) ||
-          i.department.toLowerCase().contains(q);
-    }).toList();
+    final res = await _api.get('/interns/', query: {'q': query});
+    return _internsFrom(res);
   }
 
   Future<void> updateIntern(String internId, Map<String, dynamic> data) async {
-    await _db.collection(AppConstants.internsCollection).doc(internId).update(data);
+    await _api.patch('/interns/$internId', body: data);
   }
 
   // ─── Departments ──────────────────────────────────────────────
 
   Future<List<DepartmentModel>> getAllDepartments() async {
-    final snap = await _db.collection(AppConstants.departmentsCollection).get();
-    return snap.docs.map(DepartmentModel.fromFirestore).toList();
+    final res = await _api.get('/departments/');
+    return (res['departments'] as List)
+        .map((e) =>
+            DepartmentModel.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
   }
 
   Future<DepartmentModel?> getDepartmentById(String id) async {
-    final doc = await _db.collection(AppConstants.departmentsCollection).doc(id).get();
-    if (!doc.exists) return null;
-    return DepartmentModel.fromFirestore(doc);
+    final all = await getAllDepartments();
+    try {
+      return all.firstWhere((d) => d.id == id);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<String> createDepartment(DepartmentModel dept) async {
-    final ref = await _db
-        .collection(AppConstants.departmentsCollection)
-        .add(dept.toFirestore());
-    return ref.id;
+    final res = await _api.post('/departments/', body: {
+      'name': dept.name,
+      'description': dept.description,
+    });
+    return ((res['department'] as Map).cast<String, dynamic>())['id']
+        as String;
   }
 
-  Future<void> updateDepartment(String id, Map<String, dynamic> data) async {
-    await _db.collection(AppConstants.departmentsCollection).doc(id).update(data);
+  /// Departments don't yet expose a PATCH endpoint; recreate is the only
+  /// supported "update". Throw to make this obvious to callers.
+  Future<void> updateDepartment(String id, Map<String, dynamic> data) {
+    throw UnimplementedError(
+      'PATCH /departments/<id> is not yet implemented on the backend.',
+    );
   }
 
   // ─── Evaluations ──────────────────────────────────────────────
 
   Future<List<EvaluationModel>> getEvaluationsByIntern(String internId) async {
-    final snap = await _db
-        .collection(AppConstants.evaluationsCollection)
-        .where('internId', isEqualTo: internId)
-        .orderBy('evaluationDate', descending: true)
-        .get();
-    return snap.docs.map(EvaluationModel.fromFirestore).toList();
+    final res =
+        await _api.get('/evaluations/', query: {'internId': internId});
+    return _evalsFrom(res);
   }
 
   Future<List<EvaluationModel>> getEvaluationsByMentor(String mentorId) async {
-    final snap = await _db
-        .collection(AppConstants.evaluationsCollection)
-        .where('mentorId', isEqualTo: mentorId)
-        .orderBy('evaluationDate', descending: true)
-        .get();
-    return snap.docs.map(EvaluationModel.fromFirestore).toList();
+    final res =
+        await _api.get('/evaluations/', query: {'mentorId': mentorId});
+    return _evalsFrom(res);
   }
 
   Future<String> createEvaluation(EvaluationModel evaluation) async {
-    final ref = await _db
-        .collection(AppConstants.evaluationsCollection)
-        .add(evaluation.toFirestore());
-    return ref.id;
+    final res = await _api.post('/evaluations/', body: {
+      'internId': evaluation.internId,
+      'title': evaluation.title,
+      'description': evaluation.description,
+      'criteria': evaluation.criteria,
+      'overallScore': evaluation.overallScore,
+      'comment': evaluation.comment,
+    });
+    return ((res['evaluation'] as Map).cast<String, dynamic>())['id']
+        as String;
   }
 
-  Future<void> updateEvaluation(String id, Map<String, dynamic> data) async {
-    await _db.collection(AppConstants.evaluationsCollection).doc(id).update(data);
+  Future<void> updateEvaluation(String id, Map<String, dynamic> data) {
+    throw UnimplementedError(
+      'PATCH /evaluations/<id> is not yet implemented on the backend.',
+    );
   }
 
   // ─── Attendance ───────────────────────────────────────────────
 
   Future<List<AttendanceModel>> getAttendanceByIntern(String internId) async {
-    final snap = await _db
-        .collection(AppConstants.attendanceCollection)
-        .where('internId', isEqualTo: internId)
-        .orderBy('date', descending: true)
-        .get();
-    return snap.docs.map(AttendanceModel.fromFirestore).toList();
+    final res =
+        await _api.get('/attendance/', query: {'internId': internId});
+    return _attendanceFrom(res);
   }
 
   Future<List<AttendanceModel>> getAttendanceByMentorAndWeek(
@@ -218,90 +217,133 @@ class FirestoreService {
     DateTime weekStart,
     DateTime weekEnd,
   ) async {
-    final snap = await _db
-        .collection(AppConstants.attendanceCollection)
-        .where('mentorId', isEqualTo: mentorId)
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(weekStart))
-        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(weekEnd))
-        .get();
-    return snap.docs.map(AttendanceModel.fromFirestore).toList();
+    final res = await _api.get('/attendance/', query: {
+      'mentorId': mentorId,
+      'from': _isoDate(weekStart),
+      'to': _isoDate(weekEnd),
+    });
+    return _attendanceFrom(res);
   }
 
   Future<void> saveAttendanceBatch(List<AttendanceModel> records) async {
-    final batch = _db.batch();
-    for (final record in records) {
-      final ref = _db.collection(AppConstants.attendanceCollection).doc(record.id);
-      batch.set(ref, record.toFirestore(), SetOptions(merge: true));
+    // The REST API upserts one row at a time keyed by (intern_id, date).
+    for (final r in records) {
+      await _api.post('/attendance/', body: {
+        'internId': r.internId,
+        'date': _isoDate(r.date),
+        'status': r.status,
+        if (r.note != null) 'notes': r.note,
+      });
     }
-    await batch.commit();
   }
 
   Future<String> createAttendance(AttendanceModel attendance) async {
-    final ref = await _db
-        .collection(AppConstants.attendanceCollection)
-        .add(attendance.toFirestore());
-    return ref.id;
+    final res = await _api.post('/attendance/', body: {
+      'internId': attendance.internId,
+      'date': _isoDate(attendance.date),
+      'status': attendance.status,
+      if (attendance.note != null) 'notes': attendance.note,
+    });
+    return ((res['attendance'] as Map).cast<String, dynamic>())['id']
+        as String;
   }
 
   Future<void> updateAttendance(String id, Map<String, dynamic> data) async {
-    await _db.collection(AppConstants.attendanceCollection).doc(id).update(data);
+    // Upsert by (internId, date) — caller must include those.
+    await _api.post('/attendance/', body: data);
   }
 
   // ─── Schedules ────────────────────────────────────────────────
 
   Future<List<ScheduleModel>> getSchedules({String? departmentId}) async {
-    Query query = _db
-        .collection(AppConstants.schedulesCollection)
-        .orderBy('uploadDate', descending: true);
-    if (departmentId != null) {
-      query = query.where('departmentId', isEqualTo: departmentId);
-    }
-    final snap = await query.get();
-    return snap.docs.map((d) => ScheduleModel.fromFirestore(d as DocumentSnapshot)).toList();
+    final res = await _api.get('/schedules/');
+    final all = (res['schedules'] as List)
+        .map((e) =>
+            ScheduleModel.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
+    return departmentId == null
+        ? all
+        : all.where((s) => s.departmentId == departmentId).toList();
   }
 
   Future<String> createSchedule(ScheduleModel schedule) async {
-    final ref = await _db
-        .collection(AppConstants.schedulesCollection)
-        .add(schedule.toFirestore());
-    return ref.id;
+    final res = await _api.post('/schedules/', body: {
+      'title': schedule.title,
+      'description': schedule.description,
+      'fileUrl': schedule.fileUrl,
+      'weekLabel': schedule.weekLabel,
+    });
+    return ((res['schedule'] as Map).cast<String, dynamic>())['id']
+        as String;
   }
 
   Future<void> deleteSchedule(String id) async {
-    await _db.collection(AppConstants.schedulesCollection).doc(id).delete();
+    await _api.delete('/schedules/$id');
   }
 
   // ─── Training Files ───────────────────────────────────────────
 
-  Future<List<TrainingFileModel>> getTrainingFiles({String? departmentId}) async {
-    Query query = _db
-        .collection(AppConstants.trainingFilesCollection)
-        .orderBy('uploadDate', descending: true);
-    if (departmentId != null) {
-      query = query.where('departmentId', isEqualTo: departmentId);
-    }
-    final snap = await query.get();
-    return snap.docs.map((d) => TrainingFileModel.fromFirestore(d as DocumentSnapshot)).toList();
+  Future<List<TrainingFileModel>> getTrainingFiles({
+    String? departmentId,
+  }) async {
+    final res = await _api.get('/training-files/');
+    final all = (res['trainingFiles'] as List)
+        .map((e) =>
+            TrainingFileModel.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
+    return departmentId == null
+        ? all
+        : all.where((f) => f.departmentId == departmentId).toList();
   }
 
   Future<String> createTrainingFile(TrainingFileModel file) async {
-    final ref = await _db
-        .collection(AppConstants.trainingFilesCollection)
-        .add(file.toFirestore());
-    return ref.id;
+    final res = await _api.post('/training-files/', body: {
+      'title': file.title,
+      'description': file.description,
+      'fileUrl': file.fileUrl,
+      'fileType': file.fileType,
+      'tags': file.tags,
+    });
+    return ((res['trainingFile'] as Map).cast<String, dynamic>())['id']
+        as String;
   }
 
   Future<void> deleteTrainingFile(String id) async {
-    await _db.collection(AppConstants.trainingFilesCollection).doc(id).delete();
+    await _api.delete('/training-files/$id');
   }
 
   Future<List<TrainingFileModel>> searchTrainingFiles(String query) async {
-    final all = await getTrainingFiles();
-    final q = query.toLowerCase();
-    return all.where((f) {
-      return f.title.toLowerCase().contains(q) ||
-          f.description.toLowerCase().contains(q) ||
-          f.tags.any((t) => t.toLowerCase().contains(q));
-    }).toList();
+    final res = await _api.get('/training-files/', query: {'q': query});
+    return (res['trainingFiles'] as List)
+        .map((e) =>
+            TrainingFileModel.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
   }
+
+  // ─── Helpers ──────────────────────────────────────────────────
+
+  List<InternModel> _internsFrom(Map<String, dynamic> res) {
+    return (res['interns'] as List)
+        .map((e) => InternModel.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
+  }
+
+  List<EvaluationModel> _evalsFrom(Map<String, dynamic> res) {
+    return (res['evaluations'] as List)
+        .map((e) =>
+            EvaluationModel.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
+  }
+
+  List<AttendanceModel> _attendanceFrom(Map<String, dynamic> res) {
+    return (res['attendance'] as List)
+        .map((e) =>
+            AttendanceModel.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
+  }
+
+  String _isoDate(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 }

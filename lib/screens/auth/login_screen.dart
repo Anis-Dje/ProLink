@@ -38,10 +38,6 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text,
       );
       if (!mounted) return;
-      if (user == null) {
-        AppUtils.showSnackBar(context, 'Utilisateur introuvable', isError: true);
-        return;
-      }
       _navigateByRole(user);
     } catch (e) {
       if (mounted) {

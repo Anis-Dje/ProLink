@@ -1,165 +1,120 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 
-import 'firebase_options.dart';
-import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
+import 'core/theme/app_theme.dart';
 import 'models/user_model.dart';
+import 'services/api_client.dart';
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
 import 'services/storage_service.dart';
 
 // Auth screens
 import 'screens/auth/login_screen.dart';
-import 'screens/auth/register_screen.dart';
 import 'screens/auth/pending_approval_screen.dart';
+import 'screens/auth/register_screen.dart';
 
 // Admin screens
 import 'screens/admin/admin_dashboard.dart';
-import 'screens/admin/manage_interns_screen.dart';
 import 'screens/admin/assign_intern_screen.dart';
+import 'screens/admin/manage_interns_screen.dart';
 import 'screens/admin/upload_documents_screen.dart';
 import 'screens/admin/user_management_screen.dart';
 
 // Mentor screens
-import 'screens/mentor/mentor_dashboard.dart';
 import 'screens/mentor/assigned_interns_screen.dart';
-import 'screens/mentor/evaluate_intern_screen.dart';
 import 'screens/mentor/attendance_tracking_screen.dart';
+import 'screens/mentor/evaluate_intern_screen.dart';
+import 'screens/mentor/mentor_dashboard.dart';
 import 'screens/mentor/upload_training_screen.dart';
 
 // Intern screens
+import 'screens/intern/evaluations_screen.dart';
 import 'screens/intern/intern_dashboard.dart';
-import 'screens/intern/work_id_card_screen.dart';
 import 'screens/intern/schedule_screen.dart';
 import 'screens/intern/training_files_screen.dart';
-import 'screens/intern/evaluations_screen.dart';
+import 'screens/intern/work_id_card_screen.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase. When running against an unconfigured
-  // firebase_options.dart, this will throw - tell the developer to run
-  // `flutterfire configure` in their clone.
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  final apiClient = ApiClient();
+  final authService = AuthService(apiClient);
+  // Resolve any persisted session before the first frame so the router can
+  // pick the right initial route.
+  await authService.init();
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
   ));
 
-  runApp(const ProLinkApp());
+  runApp(ProLinkApp(
+    apiClient: apiClient,
+    authService: authService,
+  ));
 }
 
 class ProLinkApp extends StatelessWidget {
-  const ProLinkApp({super.key});
+  const ProLinkApp({
+    super.key,
+    required this.apiClient,
+    required this.authService,
+  });
+
+  final ApiClient apiClient;
+  final AuthService authService;
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider<AuthService>(create: (_) => AuthService()),
-        Provider<FirestoreService>(create: (_) => FirestoreService()),
-        Provider<StorageService>(create: (_) => StorageService()),
-        StreamProvider<User?>(
-          create: (ctx) => ctx.read<AuthService>().authStateChanges,
-          initialData: null,
+        Provider<ApiClient>.value(value: apiClient),
+        ChangeNotifierProvider<AuthService>.value(value: authService),
+        Provider<FirestoreService>(
+          create: (_) => FirestoreService(apiClient),
+        ),
+        Provider<StorageService>(
+          create: (_) => StorageService(apiClient),
         ),
       ],
-      child: const _AppWithRouter(),
+      child: _AppWithRouter(authService: authService),
     );
   }
 }
 
-/// Holds the currently-signed-in [UserModel] for the router. Extends
-/// [ChangeNotifier] so it can be passed as `refreshListenable` to GoRouter.
-class AuthStateNotifier extends ChangeNotifier {
-  UserModel? _user;
-  bool _loading = true;
-
-  UserModel? get user => _user;
-  bool get loading => _loading;
-  bool get isLoggedIn => _user != null;
-
-  void setUser(UserModel? user) {
-    _user = user;
-    _loading = false;
-    notifyListeners();
-  }
-
-  void setLoading() {
-    _loading = true;
-    notifyListeners();
-  }
-}
-
 class _AppWithRouter extends StatefulWidget {
-  const _AppWithRouter();
+  const _AppWithRouter({required this.authService});
+  final AuthService authService;
 
   @override
   State<_AppWithRouter> createState() => _AppWithRouterState();
 }
 
 class _AppWithRouterState extends State<_AppWithRouter> {
-  final AuthStateNotifier _authNotifier = AuthStateNotifier();
-
-  @override
-  void initState() {
-    super.initState();
-    _listenToAuth();
-  }
-
-  @override
-  void dispose() {
-    _authNotifier.dispose();
-    super.dispose();
-  }
-
-  void _listenToAuth() {
-    FirebaseAuth.instance.authStateChanges().listen((user) async {
-      if (user == null) {
-        _authNotifier.setUser(null);
-      } else {
-        try {
-          final userModel =
-              await context.read<AuthService>().getUserById(user.uid);
-          _authNotifier.setUser(userModel);
-        } catch (_) {
-          _authNotifier.setUser(null);
-        }
-      }
-    });
-  }
-
   late final GoRouter _router = GoRouter(
     initialLocation: '/login',
-    refreshListenable: _authNotifier,
+    refreshListenable: widget.authService,
     redirect: (context, state) {
-      if (_authNotifier.loading) return null;
+      if (widget.authService.initializing) return null;
 
-      final currentUser = _authNotifier.user;
-      final isLoggedIn = currentUser != null;
+      final user = widget.authService.currentUser;
+      final isLoggedIn = user != null;
       final loc = state.matchedLocation;
       final isOnAuth = loc == '/login' || loc == '/register';
 
       if (!isLoggedIn && !isOnAuth && loc != '/pending') return '/login';
       if (isLoggedIn && isOnAuth) {
-        return _getHomeRouteForUser(currentUser);
+        return _homeFor(user);
       }
 
       if (isLoggedIn) {
-        final role = currentUser.role;
-
+        final role = user.role;
         if (role == UserRole.admin && loc == '/pending') {
           return '/admin/dashboard';
         }
-
         // Prevent role cross-navigation.
         if (role == UserRole.intern &&
             (loc.startsWith('/admin') || loc.startsWith('/mentor'))) {
@@ -174,18 +129,19 @@ class _AppWithRouterState extends State<_AppWithRouter> {
           return '/admin/dashboard';
         }
       }
-
       return null;
     },
     routes: [
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
       GoRoute(
-          path: '/pending', builder: (_, __) => const PendingApprovalScreen()),
+          path: '/pending',
+          builder: (_, __) => const PendingApprovalScreen()),
 
-      // Admin routes
+      // Admin
       GoRoute(
-          path: '/admin/dashboard', builder: (_, __) => const AdminDashboard()),
+          path: '/admin/dashboard',
+          builder: (_, __) => const AdminDashboard()),
       GoRoute(
           path: '/admin/interns',
           builder: (_, __) => const ManageInternsScreen()),
@@ -199,7 +155,7 @@ class _AppWithRouterState extends State<_AppWithRouter> {
           path: '/admin/users',
           builder: (_, __) => const UserManagementScreen()),
 
-      // Mentor routes
+      // Mentor
       GoRoute(
           path: '/mentor/dashboard',
           builder: (_, __) => const MentorDashboard()),
@@ -216,7 +172,7 @@ class _AppWithRouterState extends State<_AppWithRouter> {
           path: '/mentor/training',
           builder: (_, __) => const UploadTrainingScreen()),
 
-      // Intern routes
+      // Intern
       GoRoute(
           path: '/intern/dashboard',
           builder: (_, __) => const InternDashboard()),
@@ -224,7 +180,8 @@ class _AppWithRouterState extends State<_AppWithRouter> {
           path: '/intern/id-card',
           builder: (_, __) => const WorkIdCardScreen()),
       GoRoute(
-          path: '/intern/schedule', builder: (_, __) => const ScheduleScreen()),
+          path: '/intern/schedule',
+          builder: (_, __) => const ScheduleScreen()),
       GoRoute(
           path: '/intern/training',
           builder: (_, __) => const TrainingFilesScreen()),
@@ -234,7 +191,7 @@ class _AppWithRouterState extends State<_AppWithRouter> {
     ],
   );
 
-  String _getHomeRouteForUser(UserModel user) {
+  String _homeFor(UserModel user) {
     switch (user.role) {
       case UserRole.admin:
         return '/admin/dashboard';

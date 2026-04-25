@@ -69,7 +69,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
 
       final authService = context.read<AuthService>();
-      final user = await authService.registerIntern(
+      await authService.registerIntern(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         fullName: _fullNameController.text.trim(),
@@ -82,9 +82,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (!mounted) return;
-      if (user != null) {
-        context.go('/pending');
-      }
+      // After successful intern signup the JWT is issued, but the account is
+      // pending admin approval; route to the holding screen until approved.
+      context.go('/pending');
     } catch (e) {
       if (mounted) {
         String msg = e.toString();

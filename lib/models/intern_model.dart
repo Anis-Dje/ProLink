@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class InternModel {
   final String id;
   final String userId;
@@ -37,47 +35,48 @@ class InternModel {
     this.rejectionReason,
   });
 
-  factory InternModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory InternModel.fromJson(Map<String, dynamic> json) {
+    DateTime? parse(Object? v) =>
+        v is String ? DateTime.tryParse(v) : null;
     return InternModel(
-      id: doc.id,
-      userId: data['userId'] ?? '',
-      fullName: data['fullName'] ?? '',
-      email: data['email'] ?? '',
-      phone: data['phone'] ?? '',
-      studentId: data['studentId'] ?? '',
-      department: data['department'] ?? '',
-      mentorId: data['mentorId'],
-      profilePhotoUrl: data['profilePhotoUrl'],
-      status: data['status'] ?? 'pending',
-      registrationDate: (data['registrationDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      startDate: (data['startDate'] as Timestamp?)?.toDate(),
-      endDate: (data['endDate'] as Timestamp?)?.toDate(),
-      university: data['university'] ?? '',
-      specialization: data['specialization'] ?? '',
-      rejectionReason: data['rejectionReason'],
+      id: json['id'] as String,
+      userId: json['userId'] as String? ?? '',
+      fullName: json['fullName'] as String? ?? '',
+      email: json['email'] as String? ?? '',
+      phone: json['phone'] as String? ?? '',
+      studentId: json['studentId'] as String? ?? '',
+      department: json['department'] as String? ?? '',
+      mentorId: json['mentorId'] as String?,
+      profilePhotoUrl: json['profilePhotoUrl'] as String?,
+      status: json['status'] as String? ?? 'pending',
+      registrationDate:
+          parse(json['registrationDate']) ?? DateTime.now(),
+      startDate: parse(json['startDate']),
+      endDate: parse(json['endDate']),
+      university: json['university'] as String? ?? '',
+      specialization: json['specialization'] as String? ?? '',
+      rejectionReason: json['rejectionReason'] as String?,
     );
   }
 
-  Map<String, dynamic> toFirestore() {
-    return {
-      'userId': userId,
-      'fullName': fullName,
-      'email': email,
-      'phone': phone,
-      'studentId': studentId,
-      'department': department,
-      'mentorId': mentorId,
-      'profilePhotoUrl': profilePhotoUrl,
-      'status': status,
-      'registrationDate': Timestamp.fromDate(registrationDate),
-      'startDate': startDate != null ? Timestamp.fromDate(startDate!) : null,
-      'endDate': endDate != null ? Timestamp.fromDate(endDate!) : null,
-      'university': university,
-      'specialization': specialization,
-      'rejectionReason': rejectionReason,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'userId': userId,
+        'fullName': fullName,
+        'email': email,
+        'phone': phone,
+        'studentId': studentId,
+        'department': department,
+        'mentorId': mentorId,
+        'profilePhotoUrl': profilePhotoUrl,
+        'status': status,
+        'registrationDate': registrationDate.toUtc().toIso8601String(),
+        'startDate': startDate?.toUtc().toIso8601String(),
+        'endDate': endDate?.toUtc().toIso8601String(),
+        'university': university,
+        'specialization': specialization,
+        'rejectionReason': rejectionReason,
+      };
 
   InternModel copyWith({
     String? id,
