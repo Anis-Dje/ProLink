@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 /// Thin HTTP client around the Pro-Link PHP REST API.
@@ -12,14 +13,18 @@ import 'package:http/http.dart' as http;
 /// course covers.
 class ApiClient {
   ApiClient({String? baseUrl})
-      : baseUrl = (baseUrl ?? _defaultBaseUrl).trimRight();
+      : baseUrl = (baseUrl ?? _defaultBaseUrl).trimRight() {
+    if (kDebugMode) {
+      debugPrint('[ApiClient] baseUrl=$baseUrl');
+    }
+  }
 
   /// Override at build time with `--dart-define=API_BASE_URL=http://...`.
   /// The default targets the Android emulator talking to a `php -S` on
   /// the host, which is the course's localhost pattern.
   static const _defaultBaseUrl =
       String.fromEnvironment('API_BASE_URL', defaultValue: _envFallback);
-  static const _envFallback = 'http://10.0.2.2:8080/api';
+  static const _envFallback = 'http://192.168.1.60:8081/api';
 
   final String baseUrl;
 
@@ -55,14 +60,18 @@ class ApiClient {
 
   Future<Map<String, dynamic>> get(String path,
       {Map<String, dynamic>? query}) async {
-    final res = await http.get(_uri(path, query), headers: _headers());
+    final uri = _uri(path, query);
+    if (kDebugMode) debugPrint('[ApiClient] GET $uri');
+    final res = await http.get(uri, headers: _headers());
     return _decode(res);
   }
 
   Future<Map<String, dynamic>> post(String path,
       {Object? body, Map<String, dynamic>? query}) async {
+    final uri = _uri(path, query);
+    if (kDebugMode) debugPrint('[ApiClient] POST $uri');
     final res = await http.post(
-      _uri(path, query),
+      uri,
       headers: _headers(),
       body: jsonEncode(body ?? const <String, dynamic>{}),
     );
@@ -71,8 +80,10 @@ class ApiClient {
 
   Future<Map<String, dynamic>> patch(String path,
       {Object? body, Map<String, dynamic>? query}) async {
+    final uri = _uri(path, query);
+    if (kDebugMode) debugPrint('[ApiClient] PATCH $uri');
     final res = await http.patch(
-      _uri(path, query),
+      uri,
       headers: _headers(),
       body: jsonEncode(body ?? const <String, dynamic>{}),
     );
@@ -81,8 +92,9 @@ class ApiClient {
 
   Future<Map<String, dynamic>> delete(String path,
       {Map<String, dynamic>? query}) async {
-    final res =
-        await http.delete(_uri(path, query), headers: _headers());
+    final uri = _uri(path, query);
+    if (kDebugMode) debugPrint('[ApiClient] DELETE $uri');
+    final res = await http.delete(uri, headers: _headers());
     return _decode(res);
   }
 

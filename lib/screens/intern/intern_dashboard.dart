@@ -239,7 +239,7 @@ class _InternDashboardState extends State<InternDashboard> {
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 14,
       mainAxisSpacing: 14,
-      childAspectRatio: 1.3,
+      childAspectRatio: 1.05,
       children: [
         StatsCard(
           title: 'Évaluations',

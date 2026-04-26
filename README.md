@@ -117,41 +117,79 @@ PHP 8.1+ is required, with the `pdo_pgsql` extension enabled (`php -m | grep pgs
 ### 3. Provision a Neon database
 1. Sign up at [neon.tech](https://neon.tech) and create a project.
 2. From the project dashboard, copy the connection string:
-   ```
+   ```text
    postgresql://<user>:<password>@<host>/<db>?sslmode=require
    ```
-3. Export it as `DATABASE_URL`:
+3. Set it as `DATABASE_URL`.
+
+   On Linux / macOS:
    ```bash
    export DATABASE_URL='postgresql://<user>:<password>@<host>/<db>?sslmode=require'
    ```
 
+   On Windows PowerShell:
+   ```powershell
+   $env:DATABASE_URL = "postgresql://neondb_owner:npg_RTdlsGe3hz8W@ep-muddy-wave-am1bw3qg-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+   ```
+
+4. If you are using Neon from Windows/PHP and get an error about the endpoint ID
+   or SNI, also set `PGOPTIONS` using the first part of your Neon host.
+
+   Example host:
+   ```text
+   ep-muddy-wave-am1bw3qg-pooler.c-5.us-east-1.aws.neon.tech
+   ```
+
+   Endpoint ID:
+   ```text
+   ep-muddy-wave-am1bw3qg-pooler
+   ```
+
+   Windows PowerShell:
+   ```powershell
+   $env:PGOPTIONS = "endpoint=ep-muddy-wave-am1bw3qg-pooler"
+   ```
+
 ### 4. Run the backend
-```bash
+
+On Windows PowerShell:
+```powershell
 cd server
+$env:DATABASE_URL = "postgresql://<user>:<password>@<host>/<db>?sslmode=require&channel_binding=require"
+$env:PGOPTIONS = "endpoint=<neon-endpoint-id>"   # optionnel, utile si Neon l'exige
 php migrate.php                          # one-off: create the tables
-php -S 0.0.0.0:8080 router.php           # start the API
+php -S <IP_LOCALE>:8081 router.php       # start the API on your PC's local IPv4 and port 8081
 ```
 
-The backend listens on `http://0.0.0.0:8080`. `router.php` dispatches:
+Important: run all commands above in the same PowerShell window so PHP keeps
+the `DATABASE_URL` / `PGOPTIONS` variables.
+
+The backend listens on `http://<IP_LOCALE>:8081`. `router.php` dispatches:
 - `/api/<group>/<action?>/<id?>` to the matching PHP file under `server/api/`.
 - `/files/<name>` to uploaded files in `server/uploads/`.
 
+Quick way to get your local IPv4:
+```powershell
+ipconfig | Select-String "IPv4"
+```
+
 ### 5. Run the Flutter app
-```bash
+```powershell
 cd ..
 flutter pub get
 
 # Point the app at the backend.
-# - Android emulator: 10.0.2.2 maps to the host machine.
-# - iOS simulator / desktop: use http://localhost:8080/api
-# - Physical device: your machine's LAN IP, e.g. http://192.168.1.42:8080/api
+# - LD Player emulator: <IP_LOCALE>:8081/api (your local IPv4)
+# - Android emulator (AOSP): 10.0.2.2:8081/api
+# - iOS simulator / desktop: use http://localhost:8081/api
+# - Physical device: your machine's LAN IP, e.g. http://<IP_LOCALE>:8081/api
 #   (the same 'share WiFi with phone' pattern shown in slide 11 of the
 #    Flutter – REST API deck).
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080/api
+flutter run --dart-define=API_BASE_URL=http://<IP_LOCALE>:8081/api
 ```
 
 If you don't pass `--dart-define=API_BASE_URL=...`, the app falls back to
-`http://10.0.2.2:8080/api` (the Android emulator default).
+the value configured in `lib/services/api_client.dart`.
 
 ### 6. Seed an admin account
 On a fresh DB no admins exist yet. The simplest path:

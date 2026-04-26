@@ -7,6 +7,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/app_utils.dart';
 import '../../services/auth_service.dart';
+import '../../services/api_client.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/common/loading_overlay.dart';
 
@@ -104,17 +105,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
       Navigator.of(context).pushNamedAndRemoveUntil('/pending', (route) => false);
     } catch (e) {
       if (mounted) {
-        final raw = e.toString();
-        String msg;
-        if (raw.contains('email_in_use') ||
-            raw.contains('Email already registered')) {
-          msg = 'Cet email est déjà utilisé';
-        } else if (raw.contains('>=6 chars') ||
-            raw.contains('weak-password')) {
-          msg = 'Mot de passe trop faible';
+        String msg = 'Erreur lors de l\'inscription. Réessayez.';
+
+        if (e is ApiException) {
+          if (e.error == 'email_in_use') {
+            msg = 'Cet email est déjà utilisé';
+          } else if (e.statusCode == 400) {
+            msg = e.messageOrError;
+          } else if (e.statusCode >= 500) {
+            msg = 'Erreur serveur. Vérifiez que le backend et la base de données sont bien lancés.';
+          } else {
+            msg = e.messageOrError;
+          }
         } else {
-          msg = 'Erreur lors de l\'inscription. Réessayez.';
+          final raw = e.toString();
+          if (raw.contains('email_in_use') ||
+              raw.contains('Email already registered')) {
+            msg = 'Cet email est déjà utilisé';
+          } else if (raw.contains('>=6 chars') ||
+              raw.contains('weak-password')) {
+            msg = 'Mot de passe trop faible';
+          } else if (raw.contains('SocketException') ||
+              raw.contains('Connection refused') ||
+              raw.contains('Failed host lookup')) {
+            msg = 'Impossible de contacter le serveur. Vérifiez que le backend est lancé.';
+          }
         }
+
         AppUtils.showSnackBar(context, msg, isError: true);
       }
     } finally {
@@ -412,7 +429,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }) {
     return DropdownButtonFormField<String>(
       initialValue: value,
-      style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontSize: 14),
+      isExpanded: true,
+      style: const TextStyle(
+        color: AppColors.textPrimary,
+        fontFamily: 'Poppins',
+        fontSize: 14,
+      ),
       dropdownColor: AppColors.surface,
       decoration: InputDecoration(
         labelText: label,
@@ -420,11 +442,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
         filled: true,
         fillColor: AppColors.primary,
       ),
+      selectedItemBuilder: (context) {
+        return items
+            .map(
+              (item) => Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              item,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        )
+            .toList();
+      },
       items: items
-          .map((item) => DropdownMenuItem(
-                value: item,
-                child: Text(item, overflow: TextOverflow.ellipsis),
-              ))
+          .map(
+            (item) => DropdownMenuItem(
+          value: item,
+          child: Text(
+            item,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      )
           .toList(),
       onChanged: onChanged,
     );

@@ -67,6 +67,9 @@ class _LoginScreenState extends State<LoginScreen> {
       return 'Email ou mot de passe incorrect';
     } else if (error.contains('account_disabled')) {
       return 'Ce compte a été désactivé';
+    } else if (error.contains('server_misconfigured') ||
+        error.contains('DATABASE_URL environment variable is not set')) {
+      return 'Le serveur backend n\'est pas configuré (DATABASE_URL manquant).';
     } else if (error.contains('SocketException') ||
         error.contains('Failed host lookup') ||
         error.contains('Connection refused')) {

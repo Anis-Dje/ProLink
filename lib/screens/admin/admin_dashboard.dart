@@ -147,7 +147,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 14,
       mainAxisSpacing: 14,
-      childAspectRatio: 1.3,
+      childAspectRatio: 1.05,
       children: [
         StatsCard(
           title: 'Total Stagiaires',
@@ -172,7 +172,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ),
         StatsCard(
           title: 'Gestion Docs',
-          value: '',
+          value: 'Docs',
           icon: Icons.folder_outlined,
           color: AppColors.secondary,
           onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/documents', (route) => false),
