@@ -41,8 +41,15 @@ $isId = fn($s) => $s !== null && preg_match('/[0-9]/', $s);
 $action = null;
 $id = null;
 if ($third !== null) {
-    $action = $second;
-    $id = $third;
+    // /api/interns/<uuid>/approve  → id=uuid, action=approve
+    // /api/interns/by-user/<uuid>  → action=by-user, id=uuid
+    if ($isId($second)) {
+        $id = $second;
+        $action = $third;
+    } else {
+        $action = $second;
+        $id = $third;
+    }
 } elseif ($second !== null) {
     if ($isId($second)) {
         $id = $second;

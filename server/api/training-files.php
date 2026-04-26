@@ -34,7 +34,7 @@ if ($method === 'GET') {
                 array_map(fn($x) => trim($x, '"'), str_getcsv($t));
         }
     }
-    pro_link_ok(['files' => $rows]);
+    pro_link_ok(['trainingFiles' => $rows]);
 }
 
 if ($method === 'POST') {
@@ -68,7 +68,7 @@ if ($method === 'POST') {
         $r['tags'] = $t === '' ? [] :
             array_map(fn($x) => trim($x, '"'), str_getcsv($t));
     }
-    pro_link_ok(['file' => $r], 201);
+    pro_link_ok(['trainingFile' => $r], 201);
 }
 
 pro_link_fail(405, 'method_not_allowed', 'Use GET or POST.');

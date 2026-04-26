@@ -36,7 +36,11 @@ if ($method === 'GET') {
     foreach ($rows as &$r) {
         $r['internId'] = $r['intern_id'];
         $r['mentorId'] = $r['mentor_id'];
-        $r['attendanceDate'] = pro_link_iso($r['attendance_date'] . ' 00:00:00');
+        // Flutter AttendanceModel.fromJson reads `date`; keep both for
+        // forward compatibility.
+        $iso = pro_link_iso($r['attendance_date'] . ' 00:00:00');
+        $r['attendanceDate'] = $iso;
+        $r['date'] = $iso;
         $r['createdAt'] = pro_link_iso($r['created_at']);
     }
     pro_link_ok(['attendance' => $rows]);
@@ -46,11 +50,12 @@ if ($method === 'POST') {
     pro_link_require_role($me, 'mentor', 'admin');
     $body = pro_link_read_json();
     $internId = $body['internId'] ?? '';
-    $date = $body['attendanceDate'] ?? '';
+    // Flutter sends `date`; accept `attendanceDate` too.
+    $date = $body['date'] ?? ($body['attendanceDate'] ?? '');
     $status = $body['status'] ?? '';
     if ($internId === '' || $date === '' || $status === '') {
         pro_link_fail(400, 'missing_fields',
-            'internId, attendanceDate, status are required.');
+            'internId, date, status are required.');
     }
     $sql = 'INSERT INTO attendance
         (intern_id, mentor_id, attendance_date, status, notes)
@@ -70,7 +75,9 @@ if ($method === 'POST') {
     $r = $ins->fetch();
     $r['internId'] = $r['intern_id'];
     $r['mentorId'] = $r['mentor_id'];
-    $r['attendanceDate'] = pro_link_iso($r['attendance_date'] . ' 00:00:00');
+    $iso = pro_link_iso($r['attendance_date'] . ' 00:00:00');
+    $r['attendanceDate'] = $iso;
+    $r['date'] = $iso;
     $r['createdAt'] = pro_link_iso($r['created_at']);
     pro_link_ok(['attendance' => $r], 201);
 }

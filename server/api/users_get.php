@@ -51,8 +51,4 @@ if ($method === 'PATCH') {
     pro_link_ok(['user' => pro_link_user_to_json($row)]);
 }
 
-if ($method === 'POST' && ($_GET['action'] ?? '') === 'active') {
-    // Placeholder for POST /api/users/<id>/active handled by users_active.php.
-}
-
 pro_link_fail(405, 'method_not_allowed', 'Use GET or PATCH.');

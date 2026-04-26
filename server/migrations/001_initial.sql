@@ -31,8 +31,10 @@ CREATE TABLE IF NOT EXISTS interns (
     specialization TEXT NOT NULL DEFAULT '',
     department TEXT NOT NULL DEFAULT '',
     mentor_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    -- Values must match AppConstants.status* in the Flutter client:
+    -- pending | active | rejected | completed.
     status TEXT NOT NULL DEFAULT 'pending'
-        CHECK (status IN ('pending', 'approved', 'rejected')),
+        CHECK (status IN ('pending', 'active', 'rejected', 'completed')),
     rejection_reason TEXT,
     start_date DATE,
     end_date DATE,

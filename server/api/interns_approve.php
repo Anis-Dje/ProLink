@@ -25,7 +25,7 @@ $stmt = $pdo->prepare('UPDATE interns
                         WHERE id = :id
                         RETURNING *');
 $stmt->execute([
-    ':s' => 'approved',
+    ':s' => 'active',
     ':sd' => $startDate,
     ':ed' => $endDate,
     ':id' => $id,
