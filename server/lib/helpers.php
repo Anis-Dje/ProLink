@@ -115,6 +115,9 @@ function pro_link_user_to_json(array $row): array {
 }
 
 function pro_link_intern_to_json(array $row): array {
+    // Flutter's InternModel.fromJson reads `registrationDate`; keep
+    // `createdAt` too for any future consumers.
+    $created = pro_link_iso($row['created_at'] ?? null);
     return [
         'id' => $row['id'],
         'userId' => $row['user_id'],
@@ -127,7 +130,8 @@ function pro_link_intern_to_json(array $row): array {
         'rejectionReason' => $row['rejection_reason'] ?? null,
         'startDate' => pro_link_iso($row['start_date'] ?? null),
         'endDate' => pro_link_iso($row['end_date'] ?? null),
-        'createdAt' => pro_link_iso($row['created_at'] ?? null),
+        'registrationDate' => $created,
+        'createdAt' => $created,
         // Flattened user fields for the UI cards.
         'fullName' => $row['full_name'] ?? '',
         'email' => $row['email'] ?? '',
