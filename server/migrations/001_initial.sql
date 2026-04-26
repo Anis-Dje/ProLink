@@ -96,3 +96,92 @@ CREATE TABLE IF NOT EXISTS notifications (
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- ── Backfills for databases that were first created by the earlier
+--    Dart backend. CREATE TABLE IF NOT EXISTS above is a no-op once
+--    the table exists, so any schema changes since that first run
+--    need to be applied explicitly below. All statements are idempotent.
+
+-- Session-token column (PHP auth stores a 64-char hex token per user).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token TEXT;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'users_session_token_key'
+    ) THEN
+        ALTER TABLE users
+            ADD CONSTRAINT users_session_token_key UNIQUE (session_token);
+    END IF;
+END $$;
+
+-- Intern status constraint must allow the four values the Flutter
+-- client uses: pending | active | rejected | completed.
+DO $$
+DECLARE
+    conname TEXT;
+BEGIN
+    SELECT c.conname INTO conname
+      FROM pg_constraint c
+      JOIN pg_class t ON t.oid = c.conrelid
+     WHERE t.relname = 'interns'
+       AND c.contype = 'c'
+       AND pg_get_constraintdef(c.oid) ILIKE '%status%';
+    IF conname IS NOT NULL THEN
+        EXECUTE format('ALTER TABLE interns DROP CONSTRAINT %I', conname);
+    END IF;
+    ALTER TABLE interns
+        ADD CONSTRAINT interns_status_check
+            CHECK (status IN ('pending', 'active', 'rejected', 'completed'));
+    -- Migrate any legacy 'approved' rows to 'active'.
+    UPDATE interns SET status = 'active' WHERE status = 'approved';
+END $$;
+
+-- Intern columns that the PHP backend expects but the old Dart schema
+-- may have named differently (registration_date → created_at etc.).
+-- Only add if missing; never drop data.
+ALTER TABLE interns ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE interns ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+ALTER TABLE interns ADD COLUMN IF NOT EXISTS start_date DATE;
+ALTER TABLE interns ADD COLUMN IF NOT EXISTS end_date DATE;
+-- Backfill created_at from the old registration_date column if one existed
+-- and the new column is empty.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name='interns' AND column_name='registration_date') THEN
+        UPDATE interns SET created_at = registration_date
+         WHERE created_at IS NULL AND registration_date IS NOT NULL;
+    END IF;
+END $$;
+
+-- attendance: old Dart schema named the column `date`; PHP code uses
+-- `attendance_date`. Rename if present under the old name.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name='attendance' AND column_name='date')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns
+                        WHERE table_name='attendance' AND column_name='attendance_date') THEN
+        ALTER TABLE attendance RENAME COLUMN date TO attendance_date;
+    END IF;
+END $$;
+ALTER TABLE attendance ADD COLUMN IF NOT EXISTS attendance_date DATE;
+ALTER TABLE attendance ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'attendance_intern_id_attendance_date_key'
+    ) THEN
+        BEGIN
+            ALTER TABLE attendance
+                ADD CONSTRAINT attendance_intern_id_attendance_date_key
+                UNIQUE (intern_id, attendance_date);
+        EXCEPTION WHEN duplicate_table THEN
+            -- already exists with another name; ignore
+        END;
+    END IF;
+END $$;
+
+-- evaluations: old Dart schema was missing created_at.
+ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS evaluation_date DATE DEFAULT CURRENT_DATE;
