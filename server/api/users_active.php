@@ -21,11 +21,17 @@ if (!array_key_exists('isActive', $body)) {
 }
 $isActive = (bool)$body['isActive'];
 
+// PDOStatement::execute(array) binds every value as PARAM_STR, which
+// turns PHP `false` into the empty string '' — Postgres then rejects
+// it with "invalid input syntax for type boolean". Bind the value
+// explicitly as PARAM_BOOL via bindValue() instead.
 $stmt = $pdo->prepare('UPDATE users SET is_active = :a
                         WHERE id = :id
                         RETURNING id, email, full_name, phone, role,
                                   is_active, profile_photo_url, created_at');
-$stmt->execute([':a' => $isActive, ':id' => $id]);
+$stmt->bindValue(':a', $isActive, PDO::PARAM_BOOL);
+$stmt->bindValue(':id', $id);
+$stmt->execute();
 $row = $stmt->fetch();
 if (!$row) {
     pro_link_fail(404, 'not_found', 'User not found.');
