@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:provider/provider.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/app_utils.dart';
@@ -60,7 +58,7 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
         title: const Text('Carte de Stagiaire'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.go('/intern/dashboard'),
+          onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/dashboard', (route) => false),
         ),
       ),
       body: _loading
@@ -154,10 +152,10 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
                 ),
                 child: user.profilePhotoUrl != null
                     ? ClipOval(
-                        child: CachedNetworkImage(
-                          imageUrl: user.profilePhotoUrl!,
+                        child: Image.network(
+                          user.profilePhotoUrl!,
                           fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => _fallbackAvatar(user),
+                          errorBuilder: (_, __, ___) => _fallbackAvatar(user),
                         ),
                       )
                     : _fallbackAvatar(user),
@@ -235,25 +233,35 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
           ),
           const SizedBox(height: 18),
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 18, vertical: 14),
             decoration: BoxDecoration(
               color: AppColors.textPrimary,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: QrImageView(
-              data:
-                  'prolink://id/${intern.id}?name=${Uri.encodeComponent(user.fullName)}&mat=${intern.studentId}',
-              version: QrVersions.auto,
-              size: 120,
-              backgroundColor: AppColors.textPrimary,
-              eyeStyle: const QrEyeStyle(
-                eyeShape: QrEyeShape.square,
-                color: AppColors.primary,
-              ),
-              dataModuleStyle: const QrDataModuleStyle(
-                dataModuleShape: QrDataModuleShape.square,
-                color: AppColors.primary,
-              ),
+            child: Column(
+              children: [
+                const Text(
+                  'CODE D\u2019IDENTIFICATION',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'PL-${intern.studentId}-${intern.id.substring(0, 6).toUpperCase()}',
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 2,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 10),

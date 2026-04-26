@@ -1,43 +1,34 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
-/// Thin HTTP client around the Pro-Link REST API. Owns the JWT token
-/// (persisted via flutter_secure_storage) and applies it as a Bearer header
-/// on every authenticated request.
+/// Thin HTTP client around the Pro-Link PHP REST API.
+///
+/// Uses the `http` package directly (the one taught in the
+/// *Flutter – REST API* course module). The session token lives
+/// in memory only — no on-device persistence — so the user re-logs
+/// after each cold start. That keeps the surface area to what the
+/// course covers.
 class ApiClient {
-  ApiClient({String? baseUrl, FlutterSecureStorage? storage})
-      : baseUrl = (baseUrl ?? _defaultBaseUrl).trimRight(),
-        _storage = storage ?? const FlutterSecureStorage();
+  ApiClient({String? baseUrl})
+      : baseUrl = (baseUrl ?? _defaultBaseUrl).trimRight();
 
-  /// Override at build time with `--dart-define=API_BASE_URL=https://...`.
+  /// Override at build time with `--dart-define=API_BASE_URL=http://...`.
+  /// The default targets the Android emulator talking to a `php -S` on
+  /// the host, which is the course's localhost pattern.
   static const _defaultBaseUrl =
       String.fromEnvironment('API_BASE_URL', defaultValue: _envFallback);
   static const _envFallback = 'http://10.0.2.2:8080/api';
 
   final String baseUrl;
-  final FlutterSecureStorage _storage;
-  static const _tokenKey = 'prolink_jwt';
 
   String? _token;
-
-  /// Loads any persisted token off disk. Call once at app boot.
-  Future<void> init() async {
-    _token = await _storage.read(key: _tokenKey);
-  }
-
   String? get token => _token;
   bool get isAuthenticated => _token != null;
 
-  Future<void> setToken(String? token) async {
+  void setToken(String? token) {
     _token = token;
-    if (token == null) {
-      await _storage.delete(key: _tokenKey);
-    } else {
-      await _storage.write(key: _tokenKey, value: token);
-    }
   }
 
   Map<String, String> _headers({bool json = true}) {
@@ -95,7 +86,8 @@ class ApiClient {
     return _decode(res);
   }
 
-  /// Multipart upload of a single file. Returns the public file URL.
+  /// Multipart upload. Returns the public file URL served by PHP at
+  /// `/files/<name>`.
   Future<String> uploadFile(File file, {String fieldName = 'file'}) async {
     final req = http.MultipartRequest('POST', _uri('/upload/'))
       ..headers.addAll(_headers(json: false))
@@ -122,8 +114,7 @@ class ApiException implements Exception {
   final Map<String, dynamic> body;
 
   String get error => body['error'] as String? ?? 'unknown_error';
-  String get messageOrError =>
-      (body['message'] as String?) ?? error;
+  String get messageOrError => (body['message'] as String?) ?? error;
 
   @override
   String toString() => 'ApiException($statusCode): $messageOrError';

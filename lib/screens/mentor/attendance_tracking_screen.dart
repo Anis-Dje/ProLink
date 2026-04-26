@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
@@ -142,7 +142,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen> {
           title: const Text('Suivi des Présences'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
-            onPressed: () => context.go('/mentor/dashboard'),
+            onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/dashboard', (route) => false),
           ),
           actions: [
             IconButton(

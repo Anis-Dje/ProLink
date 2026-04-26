@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_colors.dart';
@@ -101,7 +101,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
       // After successful intern signup the JWT is issued, but the account is
       // pending admin approval; route to the holding screen until approved.
-      context.go('/pending');
+      Navigator.of(context).pushNamedAndRemoveUntil('/pending', (route) => false);
     } catch (e) {
       if (mounted) {
         final raw = e.toString();
@@ -133,7 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           title: const Text('Nouveau compte stagiaire'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
-            onPressed: () => context.pop(),
+            onPressed: () => Navigator.of(context).pop(),
           ),
         ),
         body: SafeArea(
@@ -250,7 +250,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     children: [
                       const Text('Déjà un compte ?', style: TextStyle(color: AppColors.textSecondary)),
                       TextButton(
-                        onPressed: () => context.pop(),
+                        onPressed: () => Navigator.of(context).pop(),
                         child: const Text('Se connecter'),
                       ),
                     ],

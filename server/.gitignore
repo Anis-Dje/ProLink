@@ -1,7 +1,0 @@
-.dart_tool/
-.packages
-pubspec.lock
-build/
-uploads/*
-!uploads/.gitkeep
-.env

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/app_utils.dart';
@@ -151,8 +150,8 @@ class _DrawerHeader extends StatelessWidget {
             ),
             child: user.profilePhotoUrl != null
                 ? ClipOval(
-                    child: CachedNetworkImage(
-                      imageUrl: user.profilePhotoUrl!,
+                    child: Image.network(
+                      user.profilePhotoUrl!,
                       fit: BoxFit.cover,
                     ),
                   )
@@ -219,7 +218,11 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isActive = GoRouterState.of(context).matchedLocation == route;
+    // Compare against the current route name so the drawer highlights
+    // the active section. Navigator pushes named routes via
+    // RouteSettings, so ModalRoute.of(context)?.settings.name gives us
+    // the path we registered in MaterialApp.routes.
+    final isActive = ModalRoute.of(context)?.settings.name == route;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
@@ -243,7 +246,7 @@ class _NavItem extends StatelessWidget {
         ),
         onTap: () {
           Navigator.pop(context);
-          context.go(route);
+          Navigator.of(context).pushNamedAndRemoveUntil(route, (r) => false);
         },
       ),
     );
@@ -277,7 +280,7 @@ class _DrawerFooter extends StatelessWidget {
               );
               if (confirm == true && context.mounted) {
                 await context.read<AuthService>().logout();
-                if (context.mounted) context.go('/login');
+                if (context.mounted) Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
               }
             },
           ),

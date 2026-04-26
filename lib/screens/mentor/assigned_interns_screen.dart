@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/intern_model.dart';
@@ -70,7 +70,7 @@ class _AssignedInternsScreenState extends State<AssignedInternsScreen> {
         title: const Text('Mes Stagiaires'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.go('/mentor/dashboard'),
+          onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/dashboard', (route) => false),
         ),
       ),
       body: Column(
@@ -105,7 +105,7 @@ class _AssignedInternsScreenState extends State<AssignedInternsScreen> {
                                   icon: const Icon(Icons.star_outline,
                                       color: AppColors.gold),
                                   onPressed: () =>
-                                      context.go('/mentor/evaluate'),
+                                      Navigator.of(context).pushNamedAndRemoveUntil('/mentor/evaluate', (route) => false),
                                 ),
                               ],
                             ),
@@ -159,7 +159,7 @@ class _AssignedInternsScreenState extends State<AssignedInternsScreen> {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      context.go('/mentor/evaluate');
+                      Navigator.of(context).pushNamedAndRemoveUntil('/mentor/evaluate', (route) => false);
                     },
                     icon: const Icon(Icons.star_outline),
                     label: const Text('Évaluer'),
@@ -170,7 +170,7 @@ class _AssignedInternsScreenState extends State<AssignedInternsScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      context.go('/mentor/attendance');
+                      Navigator.of(context).pushNamedAndRemoveUntil('/mentor/attendance', (route) => false);
                     },
                     icon: const Icon(Icons.calendar_today_outlined),
                     label: const Text('Présence'),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_utils.dart';
 import '../../models/schedule_model.dart';
@@ -41,15 +40,27 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     }
   }
 
-  Future<void> _open(ScheduleModel s) async {
-    final uri = Uri.tryParse(s.fileUrl);
-    if (uri == null) return;
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else if (mounted) {
-      AppUtils.showSnackBar(context, 'Impossible d\'ouvrir le fichier',
-          isError: true);
-    }
+  // The course's Flutter scope doesn't cover opening external URLs, so
+  // the intern sees a dialog with the file link instead of launching a
+  // browser. They can copy/paste it in the device browser if needed.
+  void _open(ScheduleModel s) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Lien du planning'),
+        content: SelectableText(
+          s.fileUrl,
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -60,7 +71,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         title: const Text('Plannings'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.go('/intern/dashboard'),
+          onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/dashboard', (route) => false),
         ),
       ),
       body: _loading

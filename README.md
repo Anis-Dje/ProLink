@@ -3,8 +3,9 @@
 **Pro-Link** is a Flutter-based professional management application developed
 for **Université Constantine 2 – Abdelhamid Mehri**, Department of Fundamental
 Computing and its Applications (IFA), as part of the **2025-2026 Mobile
-Development Project**. It bridges the gap between the university and the
-corporate world by streamlining the entire internship lifecycle.
+Development Project** course (Dr. SEGHIRI Akram). It bridges the gap between
+the university and the corporate world by streamlining the entire internship
+lifecycle.
 
 ## Overview
 
@@ -22,7 +23,7 @@ Pro-Link unifies three user roles under a single credential system:
 - Unified login screen for all three roles
 - Self-service registration for interns (admin approval required)
 - Mentor / Admin accounts created from the admin console
-- JWT-based sessions persisted on-device via `flutter_secure_storage`
+- Session token stored in memory for the life of the process (course scope)
 
 ### Admin
 - Pending intern approval queue (approve / reject with reason)
@@ -38,43 +39,60 @@ Pro-Link unifies three user roles under a single credential system:
 - Upload training resources with searchable tags
 
 ### Intern
-- **Digital Work-ID** with photo, student ID, department, status badge and QR code
+- **Digital Work-ID** with photo, student ID, department and status badge
 - Weekly schedule viewer
 - Training catalog with predictive search
 - Evaluation history with per-criterion breakdowns and running average
+
+## Tech stack — strictly course-scope
+
+Everything in the app maps back to something explicitly taught in the
+*Mobile Applications Development* course (Dart, Flutter, State Management,
+REST API & PHP modules).
+
+**App (Flutter)**
+| Tool | Course reference |
+| --- | --- |
+| `StatelessWidget` / `StatefulWidget`, `setState`, `initState`, `build` | Flutter – part 1 |
+| `Scaffold`, `AppBar`, `Container`, `Row`, `Column`, `SizedBox`, `Center`, `Text`, `Icon`, `Image.network`, `TextField`, `ElevatedButton`, `TextEditingController`, `ListView.builder`, `TabBar` / `DefaultTabController` | Flutter – part 1 & 2 |
+| `Navigator.pushNamed` / `Navigator.pushReplacementNamed` / `Navigator.pushNamedAndRemoveUntil` / `Navigator.pop`, named routes via `MaterialApp.routes` | Flutter – part 2 (Navigation & Routing) |
+| [`provider`](https://pub.dev/packages/provider) – `ChangeNotifier`, `ChangeNotifierProvider`, `Consumer` | Flutter – State Management part 1 |
+| [`http`](https://pub.dev/packages/http) + `jsonDecode` + `factory fromJson`, `Future`/`async`/`await`, `FutureBuilder`, `CircularProgressIndicator` | Flutter – REST API |
+
+**Backend (PHP)**
+- A set of `.php` scripts under `server/api/` — one endpoint per action
+  (`auth_login.php`, `auth_register.php`, `interns.php`, `evaluations.php`,
+  `upload.php`, …), exactly the `read.php` / `write.php` style from the
+  *Flutter – REST API* slides.
+- **Neon Postgres** is reached through PDO (`pdo_pgsql`). We swapped the
+  course's local MySQL / WAMP setup for Neon so the DB can be cloud-hosted,
+  but kept the single-file-per-endpoint PHP layout.
+- `password_hash()` / `password_verify()` for credentials; random 64-char
+  hex tokens for sessions (no JWT library).
 
 ## Architecture
 
 ```
 .
-├── lib/                     # Flutter app
-│   ├── core/                # Constants, theme, utils
-│   ├── models/              # Plain JSON-serialisable domain models
-│   ├── services/            # ApiClient, AuthService, FirestoreService, StorageService
-│   ├── screens/             # auth/, admin/, mentor/, intern/
-│   ├── widgets/             # Reusable UI components
-│   └── main.dart            # Entry point + router
-└── server/                  # Dart shelf REST backend (Neon Postgres)
-    ├── bin/server.dart      # Entrypoint
-    ├── lib/                 # Config, db pool, auth, middleware, handlers
-    └── migrations/          # Idempotent SQL migrations
+├── lib/                      # Flutter app
+│   ├── core/                 # Constants, theme, utils
+│   ├── models/               # Plain JSON-serialisable domain models
+│   ├── services/
+│   │   ├── api_client.dart   # http wrapper (in-memory session token)
+│   │   ├── auth_service.dart # ChangeNotifier; login / logout / current user
+│   │   ├── firestore_service.dart (legacy name; wraps the REST endpoints)
+│   │   └── storage_service.dart   (wraps /api/upload/)
+│   ├── screens/              # auth/, admin/, mentor/, intern/
+│   ├── widgets/              # Reusable UI components
+│   └── main.dart             # MaterialApp + routes map + RootGate
+└── server/                   # PHP backend
+    ├── migrate.php           # One-off schema migration runner
+    ├── migrations/           # SQL migrations (CREATE TABLE IF NOT EXISTS)
+    ├── router.php            # Front controller for `php -S`
+    ├── lib/                  # Shared PDO / helpers
+    ├── api/                  # One PHP file per endpoint
+    └── uploads/              # Local disk storage served at /files/<name>
 ```
-
-## Tech stack
-
-**App**
-- Flutter 3+ (Dart 3+)
-- [`provider`](https://pub.dev/packages/provider) + a `ChangeNotifier`-based
-  `AuthService` for state and `go_router` redirects
-- [`go_router`](https://pub.dev/packages/go_router) with role-aware redirects
-- `http` + `flutter_secure_storage` for the REST client and JWT persistence
-
-**Backend**
-- Dart [`shelf`](https://pub.dev/packages/shelf) +
-  [`shelf_router`](https://pub.dev/packages/shelf_router)
-- [`postgres`](https://pub.dev/packages/postgres) talking to **Neon**
-- `bcrypt` for password hashing, `dart_jsonwebtoken` for JWTs
-- `shelf_multipart` + local-disk file storage served at `/files/*`
 
 ## Getting started
 
@@ -87,9 +105,18 @@ flutter --version
 flutter doctor
 ```
 
-### 2. Provision a Neon database
+### 2. Install PHP
+```bash
+# Ubuntu / Debian
+sudo apt install php-cli php-pgsql
+# macOS
+brew install php
+```
+PHP 8.1+ is required, with the `pdo_pgsql` extension enabled (`php -m | grep pgsql`).
+
+### 3. Provision a Neon database
 1. Sign up at [neon.tech](https://neon.tech) and create a project.
-2. From the project dashboard, copy the connection string. It looks like:
+2. From the project dashboard, copy the connection string:
    ```
    postgresql://<user>:<password>@<host>/<db>?sslmode=require
    ```
@@ -98,23 +125,18 @@ flutter doctor
    export DATABASE_URL='postgresql://<user>:<password>@<host>/<db>?sslmode=require'
    ```
 
-### 3. Run the backend
+### 4. Run the backend
 ```bash
 cd server
-dart pub get
-# Optionally override port / public URL / JWT secret:
-#   export PORT=8080
-#   export PUBLIC_BASE_URL=http://localhost:8080
-#   export JWT_SECRET='change-me-in-production'
-dart run bin/server.dart
+php migrate.php                          # one-off: create the tables
+php -S 0.0.0.0:8080 router.php           # start the API
 ```
 
-On first boot the server applies SQL migrations from `server/migrations/` and
-creates the 8 tables (`users`, `departments`, `interns`, `evaluations`,
-`attendance`, `schedules`, `training_files`, `notifications`). It then listens
-on `http://0.0.0.0:8080` (or `$PORT`).
+The backend listens on `http://0.0.0.0:8080`. `router.php` dispatches:
+- `/api/<group>/<action?>/<id?>` to the matching PHP file under `server/api/`.
+- `/files/<name>` to uploaded files in `server/uploads/`.
 
-### 4. Run the Flutter app
+### 5. Run the Flutter app
 ```bash
 cd ..
 flutter pub get
@@ -122,67 +144,49 @@ flutter pub get
 # Point the app at the backend.
 # - Android emulator: 10.0.2.2 maps to the host machine.
 # - iOS simulator / desktop: use http://localhost:8080/api
-# - Physical device: use your machine's LAN IP, e.g. http://192.168.1.42:8080/api
+# - Physical device: your machine's LAN IP, e.g. http://192.168.1.42:8080/api
+#   (the same 'share WiFi with phone' pattern shown in slide 11 of the
+#    Flutter – REST API deck).
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080/api
 ```
 
 If you don't pass `--dart-define=API_BASE_URL=...`, the app falls back to
 `http://10.0.2.2:8080/api` (the Android emulator default).
 
-### 5. Seed an admin account
+### 6. Seed an admin account
 On a fresh DB no admins exist yet. The simplest path:
-1. Register an intern through the app (it auto-creates the user row).
+1. Register an intern through the app (it auto-creates a user row).
 2. Promote the row to admin and clear the intern profile:
    ```sql
    UPDATE users SET role = 'admin' WHERE email = '<your-email>';
-   DELETE FROM interns WHERE user_id = (SELECT id FROM users WHERE email = '<your-email>');
+   DELETE FROM interns WHERE user_id =
+     (SELECT id FROM users WHERE email = '<your-email>');
    ```
 3. Log out and log back in — the app routes you to the admin dashboard, where
    you can create more mentors / admins from the User Management screen.
 
 ## REST API surface
 
-All routes live under `/api`. Authentication is via `Authorization: Bearer <jwt>`.
-
-| Method | Path | Notes |
-| --- | --- | --- |
-| `POST` | `/auth/register` | Self-service intern signup. Returns `{token, user}`. |
-| `POST` | `/auth/login` | Email + password. Returns `{token, user}`. |
-| `GET`  | `/auth/me` | Returns the current authenticated user. |
-| `GET`  | `/users/` | List users. Optional `?role=admin\|mentor\|intern`. |
-| `POST` | `/users/` | Admin: create a mentor or admin. |
-| `GET\|PATCH` | `/users/<id>` | Read / partial update a user. |
-| `POST` | `/users/<id>/active` | Admin: enable / disable an account. |
-| `GET`  | `/interns/` | Filters: `?status=`, `?mentorId=`, `?q=`. |
-| `GET`  | `/interns/<id>`, `/interns/by-user/<userId>` | Single intern. |
-| `POST` | `/interns/<id>/approve` | Admin: optional `{startDate, endDate}`. |
-| `POST` | `/interns/<id>/reject` | Admin: `{reason}`. |
-| `POST` | `/interns/<id>/assign` | Admin: `{mentorId, department}`. |
-| `PATCH`| `/interns/<id>` | Partial update. |
-| `GET\|POST` | `/departments/` | Admin-managed list. |
-| `GET\|POST` | `/evaluations/` | Mentor evaluations of interns. |
-| `GET\|POST` | `/attendance/` | Upserts on `(intern_id, date)`. |
-| `GET\|POST\|DELETE` | `/schedules/` | Admin uploads. |
-| `GET\|POST\|DELETE` | `/training-files/` | Mentor uploads. |
-| `GET\|PATCH\|DELETE` | `/notifications/...` | Per-user notifications. |
-| `POST` | `/upload/` | `multipart/form-data` file upload. Returns `{url}`. |
-
-Uploaded files are served as static content under `/files/<uuid>.<ext>`.
+See [`server/README.md`](server/README.md) for the full endpoint reference.
+Every endpoint returns JSON (`json_encode($return)`, as in the course slides)
+and requires `Authorization: Bearer <token>` except `/auth/login` and
+`/auth/register`.
 
 ## Database schema
 
 8 tables, defined in
 [`server/migrations/001_initial.sql`](server/migrations/001_initial.sql):
 
-- `users` (UUID PK, email UNIQUE, password_hash, role)
+- `users` (UUID PK, email UNIQUE, password_hash, role, session_token)
 - `departments`
 - `interns` (FK → users, status, mentor assignment, dates)
 - `evaluations` (criteria stored as `JSONB` for flexible grading)
-- `attendance` (UNIQUE on `(intern_id, date)` for upserts)
+- `attendance` (UNIQUE on `(intern_id, attendance_date)` for upserts)
 - `schedules`, `training_files`, `notifications`
 
 ## Security notes
-- Passwords are hashed with bcrypt before being stored in `users.password_hash`.
-- JWTs expire after 7 days. Set a strong `JWT_SECRET` in production.
+- Passwords are hashed with `password_hash(..., PASSWORD_BCRYPT)`.
+- Session tokens are 64-char hex strings stored in `users.session_token`.
+  They're rotated on every login and cleared on logout.
 - The `DATABASE_URL` should never be committed to source control. The repo's
   `.gitignore` excludes `.env` files; treat your Neon credentials as secret.

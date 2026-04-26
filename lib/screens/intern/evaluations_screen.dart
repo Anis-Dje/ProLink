@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_utils.dart';
@@ -68,7 +68,7 @@ class _EvaluationsScreenState extends State<EvaluationsScreen> {
         title: const Text('Mes Évaluations'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.go('/intern/dashboard'),
+          onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/dashboard', (route) => false),
         ),
       ),
       body: _loading

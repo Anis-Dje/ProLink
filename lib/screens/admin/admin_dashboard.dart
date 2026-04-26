@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_utils.dart';
@@ -154,28 +154,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
           value: '$_totalInterns',
           icon: Icons.people_outline,
           color: AppColors.accent,
-          onTap: () => context.go('/admin/interns'),
+          onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/interns', (route) => false),
         ),
         StatsCard(
           title: 'Stagiaires Actifs',
           value: '$_activeInterns',
           icon: Icons.check_circle_outline,
           color: AppColors.success,
-          onTap: () => context.go('/admin/interns'),
+          onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/interns', (route) => false),
         ),
         StatsCard(
           title: 'En Attente',
           value: '${_pendingInterns.length}',
           icon: Icons.hourglass_empty_outlined,
           color: AppColors.warning,
-          onTap: () => context.go('/admin/interns'),
+          onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/interns', (route) => false),
         ),
         StatsCard(
           title: 'Gestion Docs',
           value: '',
           icon: Icons.folder_outlined,
           color: AppColors.secondary,
-          onTap: () => context.go('/admin/documents'),
+          onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/documents', (route) => false),
         ),
       ],
     );
@@ -201,27 +201,27 @@ class _AdminDashboardState extends State<AdminDashboard> {
             _QuickActionCard(
               icon: Icons.people_outline,
               label: 'Stagiaires',
-              onTap: () => context.go('/admin/interns'),
+              onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/interns', (route) => false),
             ),
             _QuickActionCard(
               icon: Icons.assignment_ind_outlined,
               label: 'Affectations',
-              onTap: () => context.go('/admin/assign'),
+              onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/assign', (route) => false),
             ),
             _QuickActionCard(
               icon: Icons.schedule_outlined,
               label: 'Planning',
-              onTap: () => context.go('/admin/documents'),
+              onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/documents', (route) => false),
             ),
             _QuickActionCard(
               icon: Icons.folder_outlined,
               label: 'Documents',
-              onTap: () => context.go('/admin/documents'),
+              onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/documents', (route) => false),
             ),
             _QuickActionCard(
               icon: Icons.manage_accounts_outlined,
               label: 'Utilisateurs',
-              onTap: () => context.go('/admin/users'),
+              onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/users', (route) => false),
             ),
             _QuickActionCard(
               icon: Icons.analytics_outlined,
@@ -247,7 +247,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
             if (_pendingInterns.isNotEmpty)
               TextButton(
-                onPressed: () => context.go('/admin/interns'),
+                onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/interns', (route) => false),
                 child: const Text('Voir tout'),
               ),
           ],
@@ -280,7 +280,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               padding: const EdgeInsets.only(bottom: 10),
               child: InternCard(
                 intern: intern,
-                onTap: () => context.go('/admin/interns'),
+                onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/interns', (route) => false),
                 actions: [
                   _ActionButton(
                     icon: Icons.check,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'core/constants/app_constants.dart';
@@ -42,8 +41,6 @@ Future<void> main() async {
 
   final apiClient = ApiClient();
   final authService = AuthService(apiClient);
-  // Resolve any persisted session before the first frame so the router can
-  // pick the right initial route.
   await authService.init();
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -80,135 +77,104 @@ class ProLinkApp extends StatelessWidget {
           create: (_) => StorageService(apiClient),
         ),
       ],
-      child: _AppWithRouter(authService: authService),
+      child: MaterialApp(
+        title: AppConstants.appName,
+        theme: AppTheme.darkTheme,
+        debugShowCheckedModeBanner: false,
+        // Named routes — course pattern (Navigator.pushNamed, Navigator.pop).
+        home: const RootGate(),
+        routes: {
+          AppRoutes.login: (_) => const LoginScreen(),
+          AppRoutes.register: (_) => const RegisterScreen(),
+          AppRoutes.pending: (_) => const PendingApprovalScreen(),
+
+          AppRoutes.adminDashboard: (_) => const AdminDashboard(),
+          AppRoutes.adminInterns: (_) => const ManageInternsScreen(),
+          AppRoutes.adminAssign: (_) => const AssignInternScreen(),
+          AppRoutes.adminDocuments: (_) => const UploadDocumentsScreen(),
+          AppRoutes.adminUsers: (_) => const UserManagementScreen(),
+
+          AppRoutes.mentorDashboard: (_) => const MentorDashboard(),
+          AppRoutes.mentorInterns: (_) => const AssignedInternsScreen(),
+          AppRoutes.mentorEvaluate: (_) => const EvaluateInternScreen(),
+          AppRoutes.mentorAttendance: (_) => const AttendanceTrackingScreen(),
+          AppRoutes.mentorTraining: (_) => const UploadTrainingScreen(),
+
+          AppRoutes.internDashboard: (_) => const InternDashboard(),
+          AppRoutes.internIdCard: (_) => const WorkIdCardScreen(),
+          AppRoutes.internSchedule: (_) => const ScheduleScreen(),
+          AppRoutes.internTraining: (_) => const TrainingFilesScreen(),
+          AppRoutes.internEvaluations: (_) => const EvaluationsScreen(),
+        },
+      ),
     );
   }
 }
 
-class _AppWithRouter extends StatefulWidget {
-  const _AppWithRouter({required this.authService});
-  final AuthService authService;
+/// Routes table. Keeping them as plain `String` constants matches the
+/// course's `Navigator.pushNamed(context, '/home')` examples while making
+/// refactors easier.
+abstract class AppRoutes {
+  static const login = '/login';
+  static const register = '/register';
+  static const pending = '/pending';
 
-  @override
-  State<_AppWithRouter> createState() => _AppWithRouterState();
-}
+  static const adminDashboard = '/admin/dashboard';
+  static const adminInterns = '/admin/interns';
+  static const adminAssign = '/admin/assign';
+  static const adminDocuments = '/admin/documents';
+  static const adminUsers = '/admin/users';
 
-class _AppWithRouterState extends State<_AppWithRouter> {
-  late final GoRouter _router = GoRouter(
-    initialLocation: '/login',
-    refreshListenable: widget.authService,
-    redirect: (context, state) {
-      if (widget.authService.initializing) return null;
+  static const mentorDashboard = '/mentor/dashboard';
+  static const mentorInterns = '/mentor/interns';
+  static const mentorEvaluate = '/mentor/evaluate';
+  static const mentorAttendance = '/mentor/attendance';
+  static const mentorTraining = '/mentor/training';
 
-      final user = widget.authService.currentUser;
-      final isLoggedIn = user != null;
-      final loc = state.matchedLocation;
-      final isOnAuth = loc == '/login' || loc == '/register';
+  static const internDashboard = '/intern/dashboard';
+  static const internIdCard = '/intern/id-card';
+  static const internSchedule = '/intern/schedule';
+  static const internTraining = '/intern/training';
+  static const internEvaluations = '/intern/evaluations';
 
-      if (!isLoggedIn && !isOnAuth && loc != '/pending') return '/login';
-      if (isLoggedIn && isOnAuth) {
-        return _homeFor(user);
-      }
-
-      if (isLoggedIn) {
-        final role = user.role;
-        if (role == UserRole.admin && loc == '/pending') {
-          return '/admin/dashboard';
-        }
-        // Prevent role cross-navigation.
-        if (role == UserRole.intern &&
-            (loc.startsWith('/admin') || loc.startsWith('/mentor'))) {
-          return '/intern/dashboard';
-        }
-        if (role == UserRole.mentor &&
-            (loc.startsWith('/admin') || loc.startsWith('/intern'))) {
-          return '/mentor/dashboard';
-        }
-        if (role == UserRole.admin &&
-            (loc.startsWith('/mentor') || loc.startsWith('/intern'))) {
-          return '/admin/dashboard';
-        }
-      }
-      return null;
-    },
-    routes: [
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
-      GoRoute(
-          path: '/pending',
-          builder: (_, __) => const PendingApprovalScreen()),
-
-      // Admin
-      GoRoute(
-          path: '/admin/dashboard',
-          builder: (_, __) => const AdminDashboard()),
-      GoRoute(
-          path: '/admin/interns',
-          builder: (_, __) => const ManageInternsScreen()),
-      GoRoute(
-          path: '/admin/assign',
-          builder: (_, __) => const AssignInternScreen()),
-      GoRoute(
-          path: '/admin/documents',
-          builder: (_, __) => const UploadDocumentsScreen()),
-      GoRoute(
-          path: '/admin/users',
-          builder: (_, __) => const UserManagementScreen()),
-
-      // Mentor
-      GoRoute(
-          path: '/mentor/dashboard',
-          builder: (_, __) => const MentorDashboard()),
-      GoRoute(
-          path: '/mentor/interns',
-          builder: (_, __) => const AssignedInternsScreen()),
-      GoRoute(
-          path: '/mentor/evaluate',
-          builder: (_, __) => const EvaluateInternScreen()),
-      GoRoute(
-          path: '/mentor/attendance',
-          builder: (_, __) => const AttendanceTrackingScreen()),
-      GoRoute(
-          path: '/mentor/training',
-          builder: (_, __) => const UploadTrainingScreen()),
-
-      // Intern
-      GoRoute(
-          path: '/intern/dashboard',
-          builder: (_, __) => const InternDashboard()),
-      GoRoute(
-          path: '/intern/id-card',
-          builder: (_, __) => const WorkIdCardScreen()),
-      GoRoute(
-          path: '/intern/schedule',
-          builder: (_, __) => const ScheduleScreen()),
-      GoRoute(
-          path: '/intern/training',
-          builder: (_, __) => const TrainingFilesScreen()),
-      GoRoute(
-          path: '/intern/evaluations',
-          builder: (_, __) => const EvaluationsScreen()),
-    ],
-  );
-
-  String _homeFor(UserModel user) {
-    switch (user.role) {
+  static String homeFor(UserRole role) {
+    switch (role) {
       case UserRole.admin:
-        return '/admin/dashboard';
+        return adminDashboard;
       case UserRole.mentor:
-        return '/mentor/dashboard';
+        return mentorDashboard;
       case UserRole.intern:
-        return '/intern/dashboard';
+        return internDashboard;
     }
   }
+}
+
+/// Selects the initial screen based on auth state. Rebuilds whenever
+/// AuthService notifies (Provider `Consumer`), so login / logout
+/// automatically swap the visible screen with no manual Navigator work.
+class RootGate extends StatelessWidget {
+  const RootGate({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: AppConstants.appName,
-      theme: AppTheme.darkTheme,
-      debugShowCheckedModeBanner: false,
-      routerConfig: _router,
+    return Consumer<AuthService>(
+      builder: (context, auth, _) {
+        if (auth.initializing) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final user = auth.currentUser;
+        if (user == null) return const LoginScreen();
+        switch (user.role) {
+          case UserRole.admin:
+            return const AdminDashboard();
+          case UserRole.mentor:
+            return const MentorDashboard();
+          case UserRole.intern:
+            return const InternDashboard();
+        }
+      },
     );
   }
 }

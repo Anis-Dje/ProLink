@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
@@ -71,7 +71,7 @@ class _UploadTrainingScreenState extends State<UploadTrainingScreen> {
           title: const Text('Supports de Formation'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
-            onPressed: () => context.go('/mentor/dashboard'),
+            onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/dashboard', (route) => false),
           ),
         ),
         body: Column(
