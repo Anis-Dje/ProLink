@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'api_client.dart';
 
-/// Uploads files to the Pro-Link backend. The backend stores them on local
-/// disk and serves them at `/files/...`. The returned URL is the public URL
-/// pointing at the served file.
+/// Uploads files to the Pro-Link PHP backend. The backend stores them on
+/// local disk under `server/uploads/` and serves them at `/files/...`. The
+/// returned URL is the public URL pointing at the served file.
 class StorageService {
   StorageService(this._api);
   final ApiClient _api;

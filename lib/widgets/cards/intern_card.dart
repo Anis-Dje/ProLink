@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_utils.dart';
 import '../../models/intern_model.dart';
@@ -56,14 +55,18 @@ class InternCard extends StatelessWidget {
       ),
       child: intern.profilePhotoUrl != null
           ? ClipOval(
-              child: CachedNetworkImage(
-                imageUrl: intern.profilePhotoUrl!,
+              child: Image.network(
+                intern.profilePhotoUrl!,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => const CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppColors.accent,
-                ),
-                errorWidget: (_, __, ___) => _defaultAvatar(),
+                loadingBuilder: (_, child, progress) => progress == null
+                    ? child
+                    : const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                errorBuilder: (_, __, ___) => _defaultAvatar(),
               ),
             )
           : _defaultAvatar(),

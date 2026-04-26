@@ -8,9 +8,9 @@ import '../models/training_file_model.dart';
 import '../models/user_model.dart';
 import 'api_client.dart';
 
-/// Wrapper around the Pro-Link REST API. Named `FirestoreService` for legacy
-/// reasons (the original implementation used Firestore); now backed by a
-/// custom Dart shelf backend talking to Neon Postgres.
+/// Wrapper around the Pro-Link PHP REST API. The class name is a legacy
+/// leftover from an earlier Firestore-based prototype; today every method
+/// hits a PHP endpoint that talks to Neon Postgres via PDO.
 class FirestoreService {
   FirestoreService(this._api);
   final ApiClient _api;

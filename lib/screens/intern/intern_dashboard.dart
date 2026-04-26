@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
@@ -174,7 +174,7 @@ class _InternDashboardState extends State<InternDashboard> {
 
   Widget _buildIdCardTeaser() {
     return GestureDetector(
-      onTap: () => context.go('/intern/id-card'),
+      onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/id-card', (route) => false),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -249,7 +249,7 @@ class _InternDashboardState extends State<InternDashboard> {
           subtitle: _evaluations.isEmpty
               ? null
               : 'Moyenne ${_avgScore.toStringAsFixed(1)}/20',
-          onTap: () => context.go('/intern/evaluations'),
+          onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/evaluations', (route) => false),
         ),
         StatsCard(
           title: 'Présence',
@@ -270,7 +270,7 @@ class _InternDashboardState extends State<InternDashboard> {
           value: '→',
           icon: Icons.library_books_outlined,
           color: AppColors.warning,
-          onTap: () => context.go('/intern/training'),
+          onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/training', (route) => false),
         ),
       ],
     );
@@ -293,19 +293,19 @@ class _InternDashboardState extends State<InternDashboard> {
           Icons.schedule_outlined,
           'Planning',
           'Voir les emplois du temps',
-          () => context.go('/intern/schedule'),
+          () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/schedule', (route) => false),
         ),
         _quickTile(
           Icons.library_books_outlined,
           'Supports de cours',
           'Accéder aux fichiers',
-          () => context.go('/intern/training'),
+          () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/training', (route) => false),
         ),
         _quickTile(
           Icons.assessment_outlined,
           'Mes évaluations',
           'Voir mes notes et commentaires',
-          () => context.go('/intern/evaluations'),
+          () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/evaluations', (route) => false),
         ),
       ],
     );

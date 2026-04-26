@@ -16,21 +16,10 @@ class AuthService extends ChangeNotifier {
   bool get isLoggedIn => _currentUser != null;
   bool get initializing => _initializing;
 
-  /// Loads the persisted JWT and resolves the current user from `/auth/me`.
-  /// Call once at app start.
+  /// No on-device persistence: the session lives in memory for the life
+  /// of the process. Call once at app start to flip the "initializing"
+  /// flag to false.
   Future<void> init() async {
-    await _api.init();
-    if (_api.isAuthenticated) {
-      try {
-        final res = await _api.get('/auth/me');
-        _currentUser = UserModel.fromJson(
-            (res['user'] as Map).cast<String, dynamic>());
-      } catch (_) {
-        // Token invalid/expired -> wipe.
-        await _api.setToken(null);
-        _currentUser = null;
-      }
-    }
     _initializing = false;
     notifyListeners();
   }
@@ -40,7 +29,7 @@ class AuthService extends ChangeNotifier {
       'email': email.trim(),
       'password': password,
     });
-    await _api.setToken(res['token'] as String);
+    _api.setToken(res['token'] as String);
     final user =
         UserModel.fromJson((res['user'] as Map).cast<String, dynamic>());
     _currentUser = user;
@@ -70,7 +59,7 @@ class AuthService extends ChangeNotifier {
       'department': department,
       if (profilePhotoUrl != null) 'profilePhotoUrl': profilePhotoUrl,
     });
-    await _api.setToken(res['token'] as String);
+    _api.setToken(res['token'] as String);
     final user =
         UserModel.fromJson((res['user'] as Map).cast<String, dynamic>());
     _currentUser = user;
@@ -98,7 +87,7 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    await _api.setToken(null);
+    _api.setToken(null);
     _currentUser = null;
     notifyListeners();
   }

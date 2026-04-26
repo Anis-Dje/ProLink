@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+
 import '../../core/constants/app_colors.dart';
 
 class PendingApprovalScreen extends StatelessWidget {
@@ -73,7 +73,7 @@ class PendingApprovalScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 40),
                 OutlinedButton.icon(
-                  onPressed: () => context.go('/login'),
+                  onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false),
                   icon: const Icon(Icons.logout, size: 18),
                   label: const Text('Retour à la connexion'),
                 ),

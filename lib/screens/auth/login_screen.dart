@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_utils.dart';
@@ -51,13 +51,13 @@ class _LoginScreenState extends State<LoginScreen> {
   void _navigateByRole(UserModel user) {
     switch (user.role) {
       case UserRole.admin:
-        context.go('/admin/dashboard');
+        Navigator.of(context).pushNamedAndRemoveUntil('/admin/dashboard', (route) => false);
         break;
       case UserRole.mentor:
-        context.go('/mentor/dashboard');
+        Navigator.of(context).pushNamedAndRemoveUntil('/mentor/dashboard', (route) => false);
         break;
       case UserRole.intern:
-        context.go('/intern/dashboard');
+        Navigator.of(context).pushNamedAndRemoveUntil('/intern/dashboard', (route) => false);
         break;
     }
   }
@@ -272,7 +272,7 @@ class _LoginScreenState extends State<LoginScreen> {
           style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
         ),
         TextButton(
-          onPressed: () => context.push('/register'),
+          onPressed: () => Navigator.of(context).pushNamed('/register'),
           child: const Text('Créer un compte'),
         ),
       ],

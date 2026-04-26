@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_utils.dart';
 import '../../models/training_file_model.dart';
@@ -72,14 +71,26 @@ class _TrainingFilesScreenState extends State<TrainingFilesScreen>
       .toSet()
       .toList();
 
-  Future<void> _open(TrainingFileModel f) async {
-    final uri = Uri.tryParse(f.fileUrl);
-    if (uri == null) return;
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else if (mounted) {
-      AppUtils.showSnackBar(context, 'Impossible d\'ouvrir', isError: true);
-    }
+  // Same pattern as the schedule screen: we show the URL in a dialog
+  // because launching an external browser isn't in the course's scope.
+  void _open(TrainingFileModel f) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text(f.title),
+        content: SelectableText(
+          f.fileUrl,
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -90,7 +101,7 @@ class _TrainingFilesScreenState extends State<TrainingFilesScreen>
         title: const Text('Supports de cours'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.go('/intern/dashboard'),
+          onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/dashboard', (route) => false),
         ),
         bottom: TabBar(
           controller: _tabController,

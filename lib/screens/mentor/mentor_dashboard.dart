@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/user_model.dart';
@@ -155,7 +155,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
           value: '${_assignedInterns.length}',
           icon: Icons.groups_outlined,
           color: AppColors.accent,
-          onTap: () => context.go('/mentor/interns'),
+          onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/interns', (route) => false),
         ),
         StatsCard(
           title: 'Actifs',
@@ -174,7 +174,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
           value: '7j',
           icon: Icons.calendar_today_outlined,
           color: AppColors.warning,
-          onTap: () => context.go('/mentor/attendance'),
+          onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/attendance', (route) => false),
         ),
       ],
     );
@@ -198,11 +198,11 @@ class _MentorDashboardState extends State<MentorDashboard> {
           runSpacing: 10,
           children: [
             _actionChip(Icons.star_outline, 'Évaluer',
-                () => context.go('/mentor/evaluate')),
+                () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/evaluate', (route) => false)),
             _actionChip(Icons.fact_check_outlined, 'Présences',
-                () => context.go('/mentor/attendance')),
+                () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/attendance', (route) => false)),
             _actionChip(Icons.upload_file_outlined, 'Support',
-                () => context.go('/mentor/training')),
+                () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/training', (route) => false)),
           ],
         ),
       ],
@@ -255,7 +255,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
               ),
             ),
             TextButton(
-              onPressed: () => context.go('/mentor/interns'),
+              onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/interns', (route) => false),
               child: const Text('Voir tout'),
             ),
           ],

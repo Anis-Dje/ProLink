@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_utils.dart';
@@ -90,7 +90,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
           title: const Text('Gestion des Utilisateurs'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
-            onPressed: () => context.go('/admin/dashboard'),
+            onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/dashboard', (route) => false),
           ),
           bottom: TabBar(
             controller: _tabController,
