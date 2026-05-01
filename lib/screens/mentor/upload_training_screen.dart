@@ -1,6 +1,8 @@
-import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
+import 'package:cross_file/cross_file.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
@@ -9,6 +11,7 @@ import '../../core/utils/app_utils.dart';
 import '../../models/training_file_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/notification_service.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/common/custom_search_bar.dart';
 import '../../widgets/common/loading_overlay.dart';
@@ -64,11 +67,11 @@ class _UploadTrainingScreenState extends State<UploadTrainingScreen> {
   Widget build(BuildContext context) {
     return LoadingOverlay(
       isLoading: _uploading,
-      message: 'Téléversement...',
+      message: 'Uploading...',
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text('Supports de Formation'),
+          title: const Text('Training Materials'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
             onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/dashboard', (route) => false),
@@ -79,7 +82,7 @@ class _UploadTrainingScreenState extends State<UploadTrainingScreen> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: CustomSearchBar(
-                hintText: 'Rechercher un support...',
+                hintText: 'Search materials...',
                 onChanged: (q) => setState(() => _query = q),
                 suggestions: _files.map((f) => f.title).toList(),
               ),
@@ -113,7 +116,7 @@ class _UploadTrainingScreenState extends State<UploadTrainingScreen> {
         floatingActionButton: FloatingActionButton.extended(
           onPressed: _upload,
           icon: const Icon(Icons.upload_file),
-          label: const Text('Nouveau'),
+          label: const Text('New'),
         ),
       ),
     );
@@ -134,39 +137,52 @@ class _UploadTrainingScreenState extends State<UploadTrainingScreen> {
         'png',
         'jpg',
       ],
+      // Required on web (and helpful elsewhere) so the picker returns
+      // raw bytes for the preview thumbnail.
+      withData: true,
     );
-    if (result == null || result.files.single.path == null) return;
+    final picked = result?.files.single;
+    if (picked == null) return;
+
+    // Show a thumbnail preview before asking for metadata; the user
+    // can confirm or cancel based on the actual file they picked.
+    final confirmed = await _showFilePreview(picked);
+    if (confirmed != true) return;
 
     final info = await _promptInfo();
     if (info == null) return;
+
+    final xfile = _xFileFromPicked(picked);
+    if (xfile == null) return;
 
     setState(() => _uploading = true);
     try {
       final mentorId =
           context.read<AuthService>().currentUser?.id ?? 'unknown';
-      final file = File(result.files.single.path!);
       final url = await context
           .read<StorageService>()
-          .uploadTrainingFile(mentorId, file, info.title);
+          .uploadTrainingFile(mentorId, xfile, info.title);
 
       final training = TrainingFileModel(
         id: '',
         title: info.title,
         description: info.description,
         fileUrl: url,
-        fileType: p.extension(file.path).replaceFirst('.', ''),
+        fileType: p.extension(picked.name).replaceFirst('.', ''),
         uploadedBy: mentorId,
         uploadDate: DateTime.now(),
         tags: info.tags,
       );
       await context.read<FirestoreService>().createTrainingFile(training);
+      await NotificationService.instance
+          .notifyTrainingAdded(title: info.title);
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Support téléversé');
+        AppUtils.showSnackBar(context, 'Material uploaded');
       }
       _load();
     } catch (e) {
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Erreur: $e', isError: true);
+        AppUtils.showSnackBar(context, 'Error: $e', isError: true);
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -176,20 +192,106 @@ class _UploadTrainingScreenState extends State<UploadTrainingScreen> {
   Future<void> _delete(TrainingFileModel f) async {
     final confirm = await AppUtils.showConfirmDialog(
       context,
-      title: 'Supprimer',
-      content: 'Supprimer "${f.title}" ?',
+      title: 'Delete',
+      content: 'Delete "${f.title}" ?',
     );
     if (confirm != true) return;
     try {
       await context.read<StorageService>().deleteFile(f.fileUrl);
       await context.read<FirestoreService>().deleteTrainingFile(f.id);
-      if (mounted) AppUtils.showSnackBar(context, 'Supprimé');
+      if (mounted) AppUtils.showSnackBar(context, 'Deleted');
       _load();
     } catch (_) {
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Erreur', isError: true);
+        AppUtils.showSnackBar(context, 'Error', isError: true);
       }
     }
+  }
+
+  XFile? _xFileFromPicked(PlatformFile picked) {
+    if (picked.bytes != null) {
+      return XFile.fromData(
+        picked.bytes!,
+        name: picked.name,
+        length: picked.size,
+      );
+    }
+    if (picked.path != null) {
+      return XFile(picked.path!, name: picked.name);
+    }
+    return null;
+  }
+
+  Future<bool?> _showFilePreview(PlatformFile picked) {
+    final ext = p.extension(picked.name).replaceFirst('.', '').toLowerCase();
+    final isImage = const {'png', 'jpg', 'jpeg', 'gif', 'webp'}.contains(ext);
+    final Uint8List? bytes = picked.bytes;
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Preview'),
+        content: SizedBox(
+          width: 280,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (isImage && bytes != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.memory(bytes,
+                      height: 180, fit: BoxFit.cover, width: double.infinity),
+                )
+              else
+                Container(
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.cardBorder),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      AppUtils.getFileTypeIcon(ext),
+                      color: AppColors.accent,
+                      size: 56,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 12),
+              Text(
+                picked.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${(picked.size / 1024).toStringAsFixed(1)} KB · .$ext',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<_FileInfo?> _promptInfo() async {
@@ -199,7 +301,7 @@ class _UploadTrainingScreenState extends State<UploadTrainingScreen> {
     return showDialog<_FileInfo>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Nouveau support'),
+        title: const Text('New material'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -207,7 +309,7 @@ class _UploadTrainingScreenState extends State<UploadTrainingScreen> {
               TextField(
                 controller: titleCtrl,
                 style: const TextStyle(color: AppColors.textPrimary),
-                decoration: const InputDecoration(labelText: 'Titre'),
+                decoration: const InputDecoration(labelText: 'Title'),
               ),
               const SizedBox(height: 10),
               TextField(
@@ -221,7 +323,7 @@ class _UploadTrainingScreenState extends State<UploadTrainingScreen> {
                 controller: tagsCtrl,
                 style: const TextStyle(color: AppColors.textPrimary),
                 decoration: const InputDecoration(
-                  labelText: 'Mots-clés (séparés par ,)',
+                  labelText: 'Keywords (comma-separated)',
                 ),
               ),
             ],
@@ -230,7 +332,7 @@ class _UploadTrainingScreenState extends State<UploadTrainingScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler'),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -248,7 +350,7 @@ class _UploadTrainingScreenState extends State<UploadTrainingScreen> {
                 ),
               );
             },
-            child: const Text('Téléverser'),
+            child: const Text('Upload'),
           ),
         ],
       ),
@@ -353,7 +455,7 @@ class _Empty extends StatelessWidget {
           Icon(Icons.folder_open_outlined,
               size: 56, color: AppColors.textSecondary),
           SizedBox(height: 12),
-          Text('Aucun support téléversé',
+          Text('No training material uploaded',
               style: TextStyle(color: AppColors.textSecondary)),
         ],
       ),

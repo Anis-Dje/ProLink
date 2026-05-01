@@ -39,32 +39,32 @@ class AppConstants {
 
   // Universities
   static const List<String> universities = [
-    'Université Constantine 2 – Abdelhamid Mehri',
-    'Université Constantine 1 – Frères Mentouri',
-    'Université Constantine 3',
-    'Autre',
+    'Constantine 2 University – Abdelhamid Mehri',
+    'Constantine 1 University – Mentouri Brothers',
+    'Constantine 3 University',
+    'Other',
   ];
 
   // Departments
   static const List<String> departments = [
-    'Informatique',
-    'Génie Logiciel',
-    'Réseaux et Télécommunications',
-    'Intelligence Artificielle',
-    'Systèmes Embarqués',
-    'Cybersécurité',
+    'Computer Science',
+    'Software Engineering',
+    'Networks and Telecommunications',
+    'Artificial Intelligence',
+    'Embedded Systems',
+    'Cybersecurity',
     'Data Science',
-    'Autre',
+    'Other',
   ];
 
   // Evaluation criteria
   static const List<String> evaluationCriteria = [
-    'Compétences Techniques',
+    'Technical Skills',
     'Communication',
-    'Ponctualité',
+    'Punctuality',
     'Initiative',
-    'Travail en Équipe',
-    'Adaptabilité',
+    'Teamwork',
+    'Adaptability',
   ];
 
   // Attendance statuses

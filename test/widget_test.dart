@@ -48,7 +48,7 @@ void main() {
     test('getAttendanceLabel returns a label per status', () {
       expect(
         AppUtils.getAttendanceLabel(AppConstants.attendancePresent),
-        'Présent',
+        'Present',
       );
       expect(
         AppUtils.getAttendanceLabel(AppConstants.attendanceAbsent),

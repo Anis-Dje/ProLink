@@ -65,7 +65,7 @@ class _EvaluationsScreenState extends State<EvaluationsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Mes Évaluations'),
+        title: const Text('My Evaluations'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/dashboard', (route) => false),
@@ -106,7 +106,7 @@ class _EvaluationsScreenState extends State<EvaluationsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Moyenne générale',
+                const Text('Overall average',
                     style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 13,
@@ -121,7 +121,7 @@ class _EvaluationsScreenState extends State<EvaluationsScreen> {
                   ),
                 ),
                 Text(
-                  '${_evaluations.length} évaluation(s)',
+                  '${_evaluations.length} evaluation(s)',
                   style: const TextStyle(
                       color: AppColors.textPrimary, fontSize: 11),
                 ),
@@ -293,7 +293,7 @@ class _Empty extends StatelessWidget {
               Icon(Icons.assessment_outlined,
                   size: 56, color: AppColors.textSecondary),
               SizedBox(height: 12),
-              Text('Aucune évaluation disponible',
+              Text('No evaluations available',
                   style: TextStyle(color: AppColors.textSecondary)),
             ],
           ),

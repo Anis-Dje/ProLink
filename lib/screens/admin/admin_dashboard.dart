@@ -103,11 +103,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Bonjour,',
+                'Hello,',
                 style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
               ),
               Text(
-                _currentUser?.fullName ?? 'Administrateur',
+                _currentUser?.fullName ?? 'Administrator',
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
@@ -130,7 +130,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               Icon(Icons.admin_panel_settings, color: AppColors.gold, size: 16),
               SizedBox(width: 6),
               Text(
-                'Administrateur',
+                'Administrator',
                 style: TextStyle(color: AppColors.gold, fontSize: 12, fontWeight: FontWeight.w600),
               ),
             ],
@@ -141,8 +141,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildStatsGrid() {
+    // Responsive: phones get 2 columns, tablets/web get 4 so the
+    // dashboard stays readable across screen sizes.
+    final width = MediaQuery.of(context).size.width;
+    final cols = width >= 900 ? 4 : 2;
     return GridView.count(
-      crossAxisCount: 2,
+      crossAxisCount: cols,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 14,
@@ -150,28 +154,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
       childAspectRatio: 1.05,
       children: [
         StatsCard(
-          title: 'Total Stagiaires',
+          title: 'Total Interns',
           value: '$_totalInterns',
           icon: Icons.people_outline,
           color: AppColors.accent,
           onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/interns', (route) => false),
         ),
         StatsCard(
-          title: 'Stagiaires Actifs',
+          title: 'Active Interns',
           value: '$_activeInterns',
           icon: Icons.check_circle_outline,
           color: AppColors.success,
           onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/interns', (route) => false),
         ),
         StatsCard(
-          title: 'En Attente',
+          title: 'Pending',
           value: '${_pendingInterns.length}',
           icon: Icons.hourglass_empty_outlined,
           color: AppColors.warning,
           onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/interns', (route) => false),
         ),
         StatsCard(
-          title: 'Gestion Docs',
+          title: 'Documents',
           value: 'Docs',
           icon: Icons.folder_outlined,
           color: AppColors.secondary,
@@ -186,12 +190,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Actions Rapides',
+          'Quick Actions',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 14),
         GridView.count(
-          crossAxisCount: 3,
+          crossAxisCount: MediaQuery.of(context).size.width >= 900 ? 6 : 3,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisSpacing: 12,
@@ -200,17 +204,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
           children: [
             _QuickActionCard(
               icon: Icons.people_outline,
-              label: 'Stagiaires',
+              label: 'Interns',
               onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/interns', (route) => false),
             ),
             _QuickActionCard(
               icon: Icons.assignment_ind_outlined,
-              label: 'Affectations',
+              label: 'Assignments',
               onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/assign', (route) => false),
             ),
             _QuickActionCard(
               icon: Icons.schedule_outlined,
-              label: 'Planning',
+              label: 'Schedule',
               onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/documents', (route) => false),
             ),
             _QuickActionCard(
@@ -220,13 +224,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
             _QuickActionCard(
               icon: Icons.manage_accounts_outlined,
-              label: 'Utilisateurs',
+              label: 'Users',
               onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/users', (route) => false),
             ),
             _QuickActionCard(
               icon: Icons.analytics_outlined,
-              label: 'Rapports',
-              onTap: () {},
+              label: 'Analytics',
+              onTap: () => Navigator.of(context).pushNamed('/analytics'),
             ),
           ],
         ),
@@ -242,13 +246,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'Demandes en attente',
+              'Pending requests',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             if (_pendingInterns.isNotEmpty)
               TextButton(
                 onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/interns', (route) => false),
-                child: const Text('Voir tout'),
+                child: const Text('See all'),
               ),
           ],
         ),
@@ -267,7 +271,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   Icon(Icons.check_circle_outline, color: AppColors.success, size: 36),
                   SizedBox(height: 8),
                   Text(
-                    'Aucune demande en attente',
+                    'No pending requests',
                     style: TextStyle(color: AppColors.textSecondary),
                   ),
                 ],
@@ -304,9 +308,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Future<void> _approveIntern(InternModel intern) async {
     final confirm = await AppUtils.showConfirmDialog(
       context,
-      title: 'Approuver le stagiaire',
-      content: 'Approuver ${intern.fullName} ?',
-      confirmText: 'Approuver',
+      title: 'Approve intern',
+      content: 'Approve ${intern.fullName}?',
+      confirmText: 'Approve',
     );
     if (confirm == true && mounted) {
       await context.read<FirestoreService>().approveIntern(intern.id);
@@ -317,9 +321,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Future<void> _rejectIntern(InternModel intern) async {
     final confirm = await AppUtils.showConfirmDialog(
       context,
-      title: 'Rejeter la demande',
-      content: 'Rejeter la demande de ${intern.fullName} ?',
-      confirmText: 'Rejeter',
+      title: 'Reject request',
+      content: "Reject ${intern.fullName}'s request?",
+      confirmText: 'Reject',
     );
     if (confirm == true && mounted) {
       await context.read<FirestoreService>().rejectIntern(intern.id);

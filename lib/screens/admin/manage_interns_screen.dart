@@ -24,7 +24,7 @@ class _ManageInternsScreenState extends State<ManageInternsScreen>
   String _searchQuery = '';
   bool _loading = true;
 
-  final List<String> _tabs = ['Tous', 'Actifs', 'En attente', 'Rejetés', 'Terminés'];
+  final List<String> _tabs = ['All', 'Active', 'Pending', 'Rejected', 'Completed'];
   final List<String?> _statusFilters = [
     null,
     AppConstants.statusActive,
@@ -87,7 +87,7 @@ class _ManageInternsScreenState extends State<ManageInternsScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Gestion des Stagiaires'),
+        title: const Text('Manage Interns'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/dashboard', (route) => false),
@@ -106,7 +106,7 @@ class _ManageInternsScreenState extends State<ManageInternsScreen>
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: CustomSearchBar(
-              hintText: 'Rechercher un stagiaire...',
+              hintText: 'Search interns...',
               onChanged: (q) {
                 _searchQuery = q.toLowerCase();
                 _applyFilters();
@@ -118,7 +118,7 @@ class _ManageInternsScreenState extends State<ManageInternsScreen>
             child: Row(
               children: [
                 Text(
-                  '${_filteredInterns.length} stagiaire(s)',
+                  '${_filteredInterns.length} intern(s)',
                   style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 ),
               ],
@@ -183,16 +183,16 @@ class _ManageInternsScreenState extends State<ManageInternsScreen>
   Future<void> _approveIntern(InternModel intern) async {
     final confirm = await AppUtils.showConfirmDialog(
       context,
-      title: 'Approuver',
-      content: 'Approuver ${intern.fullName} ?',
-      confirmText: 'Approuver',
+      title: 'Approve',
+      content: 'Approve ${intern.fullName}?',
+      confirmText: 'Approve',
     );
     if (confirm == true && mounted) {
       await context.read<FirestoreService>().approveIntern(
             intern.id,
             startDate: DateTime.now(),
           );
-      AppUtils.showSnackBar(context, 'Stagiaire approuvé');
+      AppUtils.showSnackBar(context, 'Intern approved');
       _loadInterns();
     }
   }
@@ -202,21 +202,21 @@ class _ManageInternsScreenState extends State<ManageInternsScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Raison du rejet'),
+        title: const Text('Rejection reason'),
         content: TextField(
           onChanged: (v) => reason = v,
-          decoration: const InputDecoration(hintText: 'Raison (optionnel)'),
+          decoration: const InputDecoration(hintText: 'Reason (optional)'),
           style: const TextStyle(color: AppColors.textPrimary),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Rejeter')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Reject')),
         ],
       ),
     );
     if (confirm == true && mounted) {
       await context.read<FirestoreService>().rejectIntern(intern.id, reason: reason);
-      AppUtils.showSnackBar(context, 'Demande rejetée');
+      AppUtils.showSnackBar(context, 'Request rejected');
       _loadInterns();
     }
   }
@@ -242,7 +242,7 @@ class _EmptyState extends StatelessWidget {
         children: [
           Icon(Icons.people_outline, size: 56, color: AppColors.textSecondary),
           SizedBox(height: 12),
-          Text('Aucun stagiaire trouvé', style: TextStyle(color: AppColors.textSecondary)),
+          Text('No interns found', style: TextStyle(color: AppColors.textSecondary)),
         ],
       ),
     );
@@ -277,22 +277,22 @@ class _InternDetailsSheet extends StatelessWidget {
           const SizedBox(height: 4),
           Text(intern.email, style: const TextStyle(color: AppColors.textSecondary)),
           const SizedBox(height: 16),
-          _InfoRow(label: 'N° Étudiant', value: intern.studentId),
-          _InfoRow(label: 'Département', value: intern.department),
-          _InfoRow(label: 'Spécialité', value: intern.specialization),
-          _InfoRow(label: 'Université', value: intern.university),
-          _InfoRow(label: 'Téléphone', value: intern.phone),
+          _InfoRow(label: 'Student #', value: intern.studentId),
+          _InfoRow(label: 'Department', value: intern.department),
+          _InfoRow(label: 'Specialization', value: intern.specialization),
+          _InfoRow(label: 'University', value: intern.university),
+          _InfoRow(label: 'Phone', value: intern.phone),
           _InfoRow(
-            label: 'Statut',
+            label: 'Status',
             value: AppUtils.getStatusLabel(intern.status),
             valueColor: AppUtils.getStatusColor(intern.status),
           ),
           _InfoRow(
-            label: 'Date d\'inscription',
+            label: 'Registration date',
             value: AppUtils.formatDate(intern.registrationDate),
           ),
           if (intern.startDate != null)
-            _InfoRow(label: 'Début du stage', value: AppUtils.formatDate(intern.startDate!)),
+            _InfoRow(label: 'Internship start', value: AppUtils.formatDate(intern.startDate!)),
           const SizedBox(height: 16),
         ],
       ),

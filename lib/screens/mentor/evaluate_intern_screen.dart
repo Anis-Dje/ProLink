@@ -8,6 +8,7 @@ import '../../models/evaluation_model.dart';
 import '../../models/intern_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/notification_service.dart';
 import '../../widgets/common/loading_overlay.dart';
 
 /// Allows mentors to create a new performance evaluation for one of
@@ -76,11 +77,11 @@ class _EvaluateInternScreenState extends State<EvaluateInternScreen> {
 
   Future<void> _save() async {
     if (_selected == null) {
-      AppUtils.showSnackBar(context, 'Sélectionner un stagiaire', isError: true);
+      AppUtils.showSnackBar(context, 'Select an intern', isError: true);
       return;
     }
     if (_titleController.text.trim().isEmpty) {
-      AppUtils.showSnackBar(context, 'Titre requis', isError: true);
+      AppUtils.showSnackBar(context, 'Title required', isError: true);
       return;
     }
 
@@ -102,8 +103,15 @@ class _EvaluateInternScreenState extends State<EvaluateInternScreen> {
       );
 
       await context.read<FirestoreService>().createEvaluation(evaluation);
+      // Bonus: notify the intern locally that a new evaluation arrived.
+      // It runs on the mentor's device but mirrors the production push
+      // notification flow that would be triggered server-side.
+      await NotificationService.instance.notifyEvaluationReceived(
+        mentorName: mentor.fullName,
+        score: _overall,
+      );
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Évaluation enregistrée');
+        AppUtils.showSnackBar(context, 'Evaluation saved');
         _titleController.clear();
         _commentController.clear();
         setState(() {
@@ -114,7 +122,7 @@ class _EvaluateInternScreenState extends State<EvaluateInternScreen> {
       }
     } catch (e) {
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Erreur: $e', isError: true);
+        AppUtils.showSnackBar(context, 'Error: $e', isError: true);
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -125,11 +133,11 @@ class _EvaluateInternScreenState extends State<EvaluateInternScreen> {
   Widget build(BuildContext context) {
     return LoadingOverlay(
       isLoading: _saving,
-      message: 'Enregistrement...',
+      message: 'Saving...',
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text('Évaluer un Stagiaire'),
+          title: const Text('Evaluate an Intern'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
             onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/dashboard', (route) => false),
@@ -158,7 +166,7 @@ class _EvaluateInternScreenState extends State<EvaluateInternScreen> {
                         ElevatedButton.icon(
                           onPressed: _save,
                           icon: const Icon(Icons.save),
-                          label: const Text('Enregistrer l\'évaluation'),
+                          label: const Text('Save evaluation'),
                         ),
                       ],
                     ),
@@ -169,7 +177,7 @@ class _EvaluateInternScreenState extends State<EvaluateInternScreen> {
 
   Widget _buildInternSelector() {
     return _Section(
-      title: 'Stagiaire',
+      title: 'Intern',
       icon: Icons.person_outlined,
       child: DropdownButtonFormField<InternModel>(
         initialValue: _selected,
@@ -191,13 +199,13 @@ class _EvaluateInternScreenState extends State<EvaluateInternScreen> {
 
   Widget _buildTitleField() {
     return _Section(
-      title: 'Titre de l\'évaluation',
+      title: 'Evaluation title',
       icon: Icons.title,
       child: TextField(
         controller: _titleController,
         style: const TextStyle(color: AppColors.textPrimary),
         decoration: const InputDecoration(
-          hintText: 'Évaluation mensuelle – Mars',
+          hintText: 'Monthly evaluation - March',
           prefixIcon: Icon(Icons.edit_outlined),
         ),
       ),
@@ -206,7 +214,7 @@ class _EvaluateInternScreenState extends State<EvaluateInternScreen> {
 
   Widget _buildScoring() {
     return _Section(
-      title: 'Critères (0-20)',
+      title: 'Criteria (0-20)',
       icon: Icons.star_outline,
       child: Column(
         children: AppConstants.evaluationCriteria.map((criterion) {
@@ -278,7 +286,7 @@ class _EvaluateInternScreenState extends State<EvaluateInternScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Note globale',
+                  'Overall grade',
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 12,
@@ -286,7 +294,7 @@ class _EvaluateInternScreenState extends State<EvaluateInternScreen> {
                   ),
                 ),
                 Text(
-                  'Moyenne des critères',
+                  'Average of criteria',
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 11,
@@ -310,14 +318,14 @@ class _EvaluateInternScreenState extends State<EvaluateInternScreen> {
 
   Widget _buildComment() {
     return _Section(
-      title: 'Commentaire',
+      title: 'Comment',
       icon: Icons.comment_outlined,
       child: TextField(
         controller: _commentController,
         maxLines: 3,
         style: const TextStyle(color: AppColors.textPrimary),
         decoration: const InputDecoration(
-          hintText: 'Observations, points à améliorer...',
+          hintText: 'Observations, areas to improve...',
         ),
       ),
     );
@@ -380,7 +388,7 @@ class _NoInterns extends StatelessWidget {
           Icon(Icons.assessment_outlined,
               size: 56, color: AppColors.textSecondary),
           SizedBox(height: 12),
-          Text('Aucun stagiaire affecté à évaluer',
+          Text('No assigned interns to evaluate',
               style: TextStyle(color: AppColors.textSecondary)),
         ],
       ),

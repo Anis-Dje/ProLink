@@ -26,7 +26,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
   bool _loading = true;
   bool _saving = false;
 
-  final _tabs = const ['Tous', 'Admins', 'Encadreurs', 'Stagiaires'];
+  final _tabs = const ['All', 'Admins', 'Mentors', 'Interns'];
 
   @override
   void initState() {
@@ -83,11 +83,11 @@ class _UserManagementScreenState extends State<UserManagementScreen>
   Widget build(BuildContext context) {
     return LoadingOverlay(
       isLoading: _saving,
-      message: 'Traitement...',
+      message: 'Processing...',
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text('Gestion des Utilisateurs'),
+          title: const Text('Manage Users'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
             onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/dashboard', (route) => false),
@@ -106,7 +106,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
             Padding(
               padding: const EdgeInsets.all(16),
               child: CustomSearchBar(
-                hintText: 'Rechercher un utilisateur...',
+                hintText: 'Search users...',
                 onChanged: (q) => setState(() => _query = q),
               ),
             ),
@@ -140,7 +140,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
         floatingActionButton: FloatingActionButton.extended(
           onPressed: _createUser,
           icon: const Icon(Icons.person_add_alt_1),
-          label: const Text('Créer un compte'),
+          label: const Text('Create account'),
         ),
       ),
     );
@@ -149,10 +149,10 @@ class _UserManagementScreenState extends State<UserManagementScreen>
   Future<void> _toggleActive(UserModel user) async {
     final confirm = await AppUtils.showConfirmDialog(
       context,
-      title: user.isActive ? 'Désactiver' : 'Activer',
+      title: user.isActive ? 'Disable' : 'Activate',
       content: user.isActive
-          ? 'Désactiver le compte de ${user.fullName} ?'
-          : 'Réactiver le compte de ${user.fullName} ?',
+          ? "Disable ${user.fullName}'s account?"
+          : "Re-activate ${user.fullName}'s account?",
     );
     if (confirm != true) return;
     setState(() => _saving = true);
@@ -163,7 +163,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
       _loadUsers();
     } catch (_) {
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Erreur', isError: true);
+        AppUtils.showSnackBar(context, 'Error', isError: true);
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -192,14 +192,14 @@ class _UserManagementScreenState extends State<UserManagementScreen>
             role: result.role,
           );
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Compte créé');
+        AppUtils.showSnackBar(context, 'Account created');
       }
       _loadUsers();
     } catch (e) {
       if (mounted) {
         String msg = e.toString();
         if (msg.contains('email-already-in-use')) {
-          msg = 'Email déjà utilisé';
+          msg = 'Email already used';
         }
         AppUtils.showSnackBar(context, msg, isError: true);
       }
@@ -264,7 +264,7 @@ class _UserTile extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     _Pill(
-                      label: user.isActive ? 'Actif' : 'Désactivé',
+                      label: user.isActive ? 'Active' : 'Disabled',
                       color: user.isActive
                           ? AppColors.success
                           : AppColors.error,
@@ -325,7 +325,7 @@ class _EmptyUsers extends StatelessWidget {
           Icon(Icons.people_outline,
               size: 56, color: AppColors.textSecondary),
           SizedBox(height: 12),
-          Text('Aucun utilisateur',
+          Text('No users',
               style: TextStyle(color: AppColors.textSecondary)),
         ],
       ),
@@ -400,7 +400,7 @@ class _CreateUserSheetState extends State<_CreateUserSheet> {
               ),
               const SizedBox(height: 18),
               const Text(
-                'Créer un compte',
+                'Create account',
                 style: TextStyle(
                     fontSize: 18, fontWeight: FontWeight.w700),
               ),
@@ -410,7 +410,7 @@ class _CreateUserSheetState extends State<_CreateUserSheet> {
                   ButtonSegment(
                       value: UserRole.mentor,
                       icon: Icon(Icons.supervisor_account),
-                      label: Text('Encadreur')),
+                      label: Text('Mentor')),
                   ButtonSegment(
                       value: UserRole.admin,
                       icon: Icon(Icons.admin_panel_settings),
@@ -423,10 +423,10 @@ class _CreateUserSheetState extends State<_CreateUserSheet> {
               TextFormField(
                 controller: _fullName,
                 decoration: const InputDecoration(
-                    labelText: 'Nom complet',
+                    labelText: 'Full name',
                     prefixIcon: Icon(Icons.person_outlined)),
                 validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Requis' : null,
+                    (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -436,7 +436,7 @@ class _CreateUserSheetState extends State<_CreateUserSheet> {
                     labelText: 'Email',
                     prefixIcon: Icon(Icons.email_outlined)),
                 validator: (v) => (v == null || !v.contains('@'))
-                    ? 'Email invalide'
+                    ? 'Invalid email'
                     : null,
               ),
               const SizedBox(height: 12),
@@ -444,7 +444,7 @@ class _CreateUserSheetState extends State<_CreateUserSheet> {
                 controller: _phone,
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(
-                    labelText: 'Téléphone',
+                    labelText: 'Phone',
                     prefixIcon: Icon(Icons.phone_outlined)),
               ),
               const SizedBox(height: 12),
@@ -452,10 +452,10 @@ class _CreateUserSheetState extends State<_CreateUserSheet> {
                 controller: _password,
                 obscureText: true,
                 decoration: const InputDecoration(
-                    labelText: 'Mot de passe temporaire',
+                    labelText: 'Temporary password',
                     prefixIcon: Icon(Icons.lock_outlined)),
                 validator: (v) =>
-                    (v == null || v.length < 6) ? 'Min 6 caractères' : null,
+                    (v == null || v.length < 6) ? 'Min 6 characters' : null,
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
@@ -473,12 +473,12 @@ class _CreateUserSheetState extends State<_CreateUserSheet> {
                   );
                 },
                 icon: const Icon(Icons.check),
-                label: const Text('Créer le compte'),
+                label: const Text('Create account'),
               ),
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
+                child: const Text('Cancel'),
               ),
             ],
           ),

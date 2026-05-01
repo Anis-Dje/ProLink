@@ -8,9 +8,11 @@ import 'models/user_model.dart';
 import 'services/api_client.dart';
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
+import 'services/notification_service.dart';
 import 'services/storage_service.dart';
 
-// Auth screens
+// Splash + auth screens
+import 'screens/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/pending_approval_screen.dart';
 import 'screens/auth/register_screen.dart';
@@ -27,7 +29,11 @@ import 'screens/mentor/assigned_interns_screen.dart';
 import 'screens/mentor/attendance_tracking_screen.dart';
 import 'screens/mentor/evaluate_intern_screen.dart';
 import 'screens/mentor/mentor_dashboard.dart';
+import 'screens/mentor/scan_attendance_screen.dart';
 import 'screens/mentor/upload_training_screen.dart';
+
+// Bonus / shared screens
+import 'screens/analytics/analytics_screen.dart';
 
 // Intern screens
 import 'screens/intern/evaluations_screen.dart';
@@ -42,6 +48,8 @@ Future<void> main() async {
   final apiClient = ApiClient();
   final authService = AuthService(apiClient);
   await authService.init();
+  // Bonus feature: bootstrap local notification channels at app launch.
+  await NotificationService.instance.init();
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -82,8 +90,11 @@ class ProLinkApp extends StatelessWidget {
         theme: AppTheme.darkTheme,
         debugShowCheckedModeBanner: false,
         // Named routes — course pattern (Navigator.pushNamed, Navigator.pop).
-        home: const RootGate(),
+        // Splash is the initial route; it then pushes /login (or the
+        // appropriate dashboard if the user is already signed in).
+        home: const SplashScreen(),
         routes: {
+          AppRoutes.splash: (_) => const SplashScreen(),
           AppRoutes.login: (_) => const LoginScreen(),
           AppRoutes.register: (_) => const RegisterScreen(),
           AppRoutes.pending: (_) => const PendingApprovalScreen(),
@@ -98,7 +109,9 @@ class ProLinkApp extends StatelessWidget {
           AppRoutes.mentorInterns: (_) => const AssignedInternsScreen(),
           AppRoutes.mentorEvaluate: (_) => const EvaluateInternScreen(),
           AppRoutes.mentorAttendance: (_) => const AttendanceTrackingScreen(),
+          AppRoutes.mentorScanAttendance: (_) => const ScanAttendanceScreen(),
           AppRoutes.mentorTraining: (_) => const UploadTrainingScreen(),
+          AppRoutes.analytics: (_) => const AnalyticsScreen(),
 
           AppRoutes.internDashboard: (_) => const InternDashboard(),
           AppRoutes.internIdCard: (_) => const WorkIdCardScreen(),
@@ -115,6 +128,7 @@ class ProLinkApp extends StatelessWidget {
 /// course's `Navigator.pushNamed(context, '/home')` examples while making
 /// refactors easier.
 abstract class AppRoutes {
+  static const splash = '/splash';
   static const login = '/login';
   static const register = '/register';
   static const pending = '/pending';
@@ -129,7 +143,9 @@ abstract class AppRoutes {
   static const mentorInterns = '/mentor/interns';
   static const mentorEvaluate = '/mentor/evaluate';
   static const mentorAttendance = '/mentor/attendance';
+  static const mentorScanAttendance = '/mentor/scan-attendance';
   static const mentorTraining = '/mentor/training';
+  static const analytics = '/analytics';
 
   static const internDashboard = '/intern/dashboard';
   static const internIdCard = '/intern/id-card';

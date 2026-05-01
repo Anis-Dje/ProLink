@@ -111,7 +111,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen> {
 
   Future<void> _save() async {
     if (_attendance.isEmpty) {
-      AppUtils.showSnackBar(context, 'Rien à enregistrer', isError: true);
+      AppUtils.showSnackBar(context, 'Nothing to save', isError: true);
       return;
     }
     setState(() => _saving = true);
@@ -120,11 +120,11 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen> {
           .read<FirestoreService>()
           .saveAttendanceBatch(_attendance.values.toList());
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Présences enregistrées');
+        AppUtils.showSnackBar(context, 'Attendance saved');
       }
     } catch (e) {
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Erreur: $e', isError: true);
+        AppUtils.showSnackBar(context, 'Error: $e', isError: true);
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -135,11 +135,11 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen> {
   Widget build(BuildContext context) {
     return LoadingOverlay(
       isLoading: _saving,
-      message: 'Enregistrement...',
+      message: 'Saving...',
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text('Suivi des Présences'),
+          title: const Text('Attendance Tracking'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
             onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/dashboard', (route) => false),
@@ -263,7 +263,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen> {
             children: [
               const SizedBox(
                 width: 120,
-                child: Text('Stagiaire',
+                child: Text('Intern',
                     style: TextStyle(
                         color: AppColors.textSecondary, fontSize: 11)),
               ),
@@ -362,7 +362,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen> {
   }
 
   String _weekdayLabel(int wd) {
-    const labels = ['', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    const labels = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return labels[wd];
   }
 }
@@ -378,7 +378,7 @@ class _NoInterns extends StatelessWidget {
           Icon(Icons.people_outline,
               size: 56, color: AppColors.textSecondary),
           SizedBox(height: 12),
-          Text('Aucun stagiaire assigné',
+          Text('No interns assigned',
               style: TextStyle(color: AppColors.textSecondary)),
         ],
       ),

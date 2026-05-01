@@ -37,17 +37,17 @@ class AppDrawer extends StatelessWidget {
         return [
           _NavItem(
             icon: Icons.dashboard_outlined,
-            label: 'Tableau de bord',
+            label: 'Dashboard',
             route: '/admin/dashboard',
           ),
           _NavItem(
             icon: Icons.people_outline,
-            label: 'Gérer les stagiaires',
+            label: 'Manage interns',
             route: '/admin/interns',
           ),
           _NavItem(
             icon: Icons.assignment_ind_outlined,
-            label: 'Affectations',
+            label: 'Assignments',
             route: '/admin/assign',
           ),
           _NavItem(
@@ -57,7 +57,7 @@ class AppDrawer extends StatelessWidget {
           ),
           _NavItem(
             icon: Icons.manage_accounts_outlined,
-            label: 'Gestion utilisateurs',
+            label: 'User management',
             route: '/admin/users',
           ),
         ];
@@ -65,27 +65,27 @@ class AppDrawer extends StatelessWidget {
         return [
           _NavItem(
             icon: Icons.dashboard_outlined,
-            label: 'Tableau de bord',
+            label: 'Dashboard',
             route: '/mentor/dashboard',
           ),
           _NavItem(
             icon: Icons.people_outline,
-            label: 'Mes stagiaires',
+            label: 'My interns',
             route: '/mentor/interns',
           ),
           _NavItem(
             icon: Icons.star_outline,
-            label: 'Évaluations',
+            label: 'Evaluations',
             route: '/mentor/evaluate',
           ),
           _NavItem(
             icon: Icons.calendar_today_outlined,
-            label: 'Présences',
+            label: 'Attendance',
             route: '/mentor/attendance',
           ),
           _NavItem(
             icon: Icons.upload_file_outlined,
-            label: 'Supports de formation',
+            label: 'Training materials',
             route: '/mentor/training',
           ),
         ];
@@ -93,27 +93,27 @@ class AppDrawer extends StatelessWidget {
         return [
           _NavItem(
             icon: Icons.dashboard_outlined,
-            label: 'Tableau de bord',
+            label: 'Dashboard',
             route: '/intern/dashboard',
           ),
           _NavItem(
             icon: Icons.badge_outlined,
-            label: 'Carte de stagiaire',
+            label: 'Intern ID Card',
             route: '/intern/id-card',
           ),
           _NavItem(
             icon: Icons.schedule_outlined,
-            label: 'Planning',
+            label: 'Schedule',
             route: '/intern/schedule',
           ),
           _NavItem(
             icon: Icons.library_books_outlined,
-            label: 'Supports de cours',
+            label: 'Course materials',
             route: '/intern/training',
           ),
           _NavItem(
             icon: Icons.assessment_outlined,
-            label: 'Mes évaluations',
+            label: 'My evaluations',
             route: '/intern/evaluations',
           ),
         ];
@@ -268,15 +268,15 @@ class _DrawerFooter extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.logout, color: AppColors.error, size: 22),
             title: const Text(
-              'Déconnexion',
+              'Log out',
               style: TextStyle(fontSize: 13, color: AppColors.error),
             ),
             onTap: () async {
               final confirm = await AppUtils.showConfirmDialog(
                 context,
-                title: 'Déconnexion',
-                content: 'Voulez-vous vraiment vous déconnecter ?',
-                confirmText: 'Déconnecter',
+                title: 'Log out',
+                content: 'Do you really want to log out?',
+                confirmText: 'Log out',
               );
               if (confirm == true && context.mounted) {
                 await context.read<AuthService>().logout();

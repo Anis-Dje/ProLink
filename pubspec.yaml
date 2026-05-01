@@ -13,25 +13,44 @@ dependencies:
   http: ^1.2.2
   # State Management (course: State Management parts 1 & 2)
   provider: ^6.1.2
-  # File picking for the upload UI. No course-taught alternative for
-  # opening the native picker; kept as the thinnest practical shim.
+  # File picking — no course-taught alternative for the native picker.
   image_picker: ^1.1.2
   file_picker: ^8.0.7
+  # XFile abstraction so file uploads work on both mobile (file path)
+  # and Flutter web (bytes only). Pulled transitively but listed here
+  # to silence `depend_on_referenced_packages`.
+  cross_file: ^0.3.4+2
   # Date formatting / path joining / id generation.
   intl: ^0.19.0
   uuid: ^4.4.2
   path: ^1.9.0
+  # Bonus features (project document explicitly lists these as
+  # creativity-bonus extensions, so packages are allowed):
+  # QR code generation for the digital Work-ID.
+  qr_flutter: ^4.1.0
+  # QR scanning for mentor attendance check-in.
+  mobile_scanner: ^5.2.3
+  # Charts on analytics dashboards.
+  fl_chart: ^0.69.0
+  # Calendar view for schedules.
+  table_calendar: ^3.1.2
+  # Local push notifications.
+  flutter_local_notifications: ^17.2.3
+  timezone: ^0.9.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  # Generates the native splash images for Android/iOS/Web.
+  flutter_native_splash: ^2.4.1
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
     - assets/icons/
+    - assets/logo.png
   fonts:
     - family: Poppins
       fonts:
@@ -42,3 +61,10 @@ flutter:
           weight: 600
         - asset: assets/fonts/Poppins-Bold.ttf
           weight: 700
+
+flutter_native_splash:
+  color: "#0A1929"
+  image: assets/logo.png
+  android_12:
+    image: assets/logo.png
+    color: "#0A1929"

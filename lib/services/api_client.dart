@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
 
+import 'package:cross_file/cross_file.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
 
 /// Thin HTTP client around the Pro-Link PHP REST API.
 ///
@@ -99,11 +100,18 @@ class ApiClient {
   }
 
   /// Multipart upload. Returns the public file URL served by PHP at
-  /// `/files/<name>`.
-  Future<String> uploadFile(File file, {String fieldName = 'file'}) async {
+  /// `/files/<name>`. Works on both mobile (file system path) and web
+  /// (only bytes available) by reading the file through `XFile`.
+  Future<String> uploadFile(XFile file, {String fieldName = 'file'}) async {
+    final bytes = await file.readAsBytes();
+    final filename = p.basename(file.path.isEmpty ? file.name : file.path);
     final req = http.MultipartRequest('POST', _uri('/upload/'))
       ..headers.addAll(_headers(json: false))
-      ..files.add(await http.MultipartFile.fromPath(fieldName, file.path));
+      ..files.add(http.MultipartFile.fromBytes(
+        fieldName,
+        bytes,
+        filename: filename,
+      ));
     final streamed = await req.send();
     final res = await http.Response.fromStream(streamed);
     final body = _decode(res);

@@ -64,42 +64,42 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String _getErrorMessage(String error) {
     if (error.contains('invalid_credentials')) {
-      return 'Email ou mot de passe incorrect';
+      return 'Incorrect email or password';
     } else if (error.contains('account_disabled')) {
-      return 'Ce compte a été désactivé';
+      return 'This account has been disabled';
     } else if (error.contains('server_misconfigured') ||
         error.contains('DATABASE_URL environment variable is not set')) {
-      return 'Le serveur backend n\'est pas configuré (DATABASE_URL manquant).';
+      return 'The backend server is not configured (DATABASE_URL missing).';
     } else if (error.contains('SocketException') ||
         error.contains('Failed host lookup') ||
         error.contains('Connection refused')) {
-      return 'Erreur de connexion réseau';
+      return 'Network connection error';
     }
-    return 'Une erreur est survenue. Réessayez.';
+    return 'An error occurred. Please try again.';
   }
 
   Future<void> _resetPassword() async {
     if (_emailController.text.trim().isEmpty) {
-      AppUtils.showSnackBar(context, 'Entrez votre email d\'abord', isError: true);
+      AppUtils.showSnackBar(context, 'Enter your email first', isError: true);
       return;
     }
     try {
       await context.read<AuthService>().resetPassword(_emailController.text.trim());
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Email de réinitialisation envoyé');
+        AppUtils.showSnackBar(context, 'Password reset email sent');
       }
     } on UnimplementedError {
       if (mounted) {
         AppUtils.showSnackBar(
           context,
-          'Cette fonctionnalité n\'est pas encore disponible. '
-          'Contactez votre administrateur.',
+          'This feature is not yet available. '
+          'Please contact your administrator.',
           isError: true,
         );
       }
     } catch (e) {
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Erreur lors de l\'envoi', isError: true);
+        AppUtils.showSnackBar(context, 'Error sending reset email', isError: true);
       }
     }
   }
@@ -108,13 +108,18 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return LoadingOverlay(
       isLoading: _isLoading,
-      message: 'Connexion en cours...',
+      message: 'Logging in...',
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Column(
+          child: Center(
+            child: ConstrainedBox(
+              // Cap the width on tablets / web so the form doesn't span
+              // the entire viewport.
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: Column(
               children: [
                 const SizedBox(height: 60),
                 _buildLogo(),
@@ -124,6 +129,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 _buildRegisterLink(),
                 const SizedBox(height: 40),
               ],
+            ),
+              ),
             ),
           ),
         ),
@@ -174,7 +181,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: 6),
         const Text(
-          'Gestion des Stages Professionnels',
+          'Professional Internship Management',
           style: TextStyle(
             fontSize: 13,
             color: AppColors.textSecondary,
@@ -192,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
-            'Connexion',
+            'Login',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
@@ -201,7 +208,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Connectez-vous à votre espace',
+            'Log in to your workspace',
             style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
           const SizedBox(height: 28),
@@ -212,12 +219,12 @@ class _LoginScreenState extends State<LoginScreen> {
             textInputAction: TextInputAction.next,
             style: const TextStyle(color: AppColors.textPrimary),
             decoration: const InputDecoration(
-              labelText: 'Adresse email',
+              labelText: 'Email address',
               prefixIcon: Icon(Icons.email_outlined),
             ),
             validator: (v) {
-              if (v == null || v.trim().isEmpty) return 'Email requis';
-              if (!v.contains('@')) return 'Email invalide';
+              if (v == null || v.trim().isEmpty) return 'Email required';
+              if (!v.contains('@')) return 'Invalid email';
               return null;
             },
           ),
@@ -229,7 +236,7 @@ class _LoginScreenState extends State<LoginScreen> {
             onFieldSubmitted: (_) => _login(),
             style: const TextStyle(color: AppColors.textPrimary),
             decoration: InputDecoration(
-              labelText: 'Mot de passe',
+              labelText: 'Password',
               prefixIcon: const Icon(Icons.lock_outlined),
               suffixIcon: IconButton(
                 icon: Icon(
@@ -240,8 +247,8 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             validator: (v) {
-              if (v == null || v.isEmpty) return 'Mot de passe requis';
-              if (v.length < 6) return 'Minimum 6 caractères';
+              if (v == null || v.isEmpty) return 'Password required';
+              if (v.length < 6) return 'Minimum 6 characters';
               return null;
             },
           ),
@@ -250,7 +257,7 @@ class _LoginScreenState extends State<LoginScreen> {
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: _resetPassword,
-              child: const Text('Mot de passe oublié ?'),
+              child: const Text('Forgot password?'),
             ),
           ),
           const SizedBox(height: 12),
@@ -259,7 +266,7 @@ class _LoginScreenState extends State<LoginScreen> {
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
-            child: const Text('Se connecter', style: TextStyle(fontSize: 16)),
+            child: const Text('Log in', style: TextStyle(fontSize: 16)),
           ),
         ],
       ),
@@ -271,12 +278,12 @@ class _LoginScreenState extends State<LoginScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Text(
-          'Nouveau stagiaire ?',
+          'New intern?',
           style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pushNamed('/register'),
-          child: const Text('Créer un compte'),
+          child: const Text('Create account'),
         ),
       ],
     );
