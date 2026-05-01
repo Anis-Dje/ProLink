@@ -288,7 +288,7 @@ class _InternDetailsSheet extends StatelessWidget {
             valueColor: AppUtils.getStatusColor(intern.status),
           ),
           _InfoRow(
-            label: 'Date d\'inscription',
+            label: 'Registration date',
             value: AppUtils.formatDate(intern.registrationDate),
           ),
           if (intern.startDate != null)

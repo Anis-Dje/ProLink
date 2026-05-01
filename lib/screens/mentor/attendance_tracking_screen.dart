@@ -362,7 +362,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen> {
   }
 
   String _weekdayLabel(int wd) {
-    const labels = ['', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    const labels = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return labels[wd];
   }
 }

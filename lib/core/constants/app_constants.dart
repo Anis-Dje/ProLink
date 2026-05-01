@@ -47,7 +47,7 @@ class AppConstants {
 
   // Departments
   static const List<String> departments = [
-    'Informatique',
+    'Computer Science',
     'Software Engineering',
     'Networks and Telecommunications',
     'Artificial Intelligence',
