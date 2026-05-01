@@ -75,7 +75,7 @@ class AppDrawer extends StatelessWidget {
           ),
           _NavItem(
             icon: Icons.star_outline,
-            label: 'Évaluations',
+            label: 'Evaluations',
             route: '/mentor/evaluate',
           ),
           _NavItem(

@@ -243,7 +243,7 @@ class _InternDashboardState extends State<InternDashboard> {
       childAspectRatio: 1.05,
       children: [
         StatsCard(
-          title: 'Évaluations',
+          title: 'Evaluations',
           value: '${_evaluations.length}',
           icon: Icons.star_outline,
           color: AppColors.gold,

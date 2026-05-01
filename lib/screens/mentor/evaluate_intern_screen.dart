@@ -137,7 +137,7 @@ class _EvaluateInternScreenState extends State<EvaluateInternScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text('Évaluer un Intern'),
+          title: const Text('Evaluate an Intern'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
             onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/dashboard', (route) => false),
@@ -205,7 +205,7 @@ class _EvaluateInternScreenState extends State<EvaluateInternScreen> {
         controller: _titleController,
         style: const TextStyle(color: AppColors.textPrimary),
         decoration: const InputDecoration(
-          hintText: 'Évaluation mensuelle – Mars',
+          hintText: 'Monthly evaluation - March',
           prefixIcon: Icon(Icons.edit_outlined),
         ),
       ),

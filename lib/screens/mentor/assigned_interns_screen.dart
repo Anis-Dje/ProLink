@@ -162,7 +162,7 @@ class _AssignedInternsScreenState extends State<AssignedInternsScreen> {
                       Navigator.of(context).pushNamedAndRemoveUntil('/mentor/evaluate', (route) => false);
                     },
                     icon: const Icon(Icons.star_outline),
-                    label: const Text('Évaluer'),
+                    label: const Text('Evaluate'),
                   ),
                 ),
                 const SizedBox(width: 10),

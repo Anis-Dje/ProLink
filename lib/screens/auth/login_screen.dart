@@ -99,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Error lors de l\'envoi', isError: true);
+        AppUtils.showSnackBar(context, 'Error sending reset email', isError: true);
       }
     }
   }

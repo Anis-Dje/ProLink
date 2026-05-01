@@ -41,6 +41,9 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _goNext() {
     if (!mounted) return;
+    // Cancel the timer so a tap-to-skip doesn't double-navigate when
+    // the timer fires moments later.
+    _timer?.cancel();
     Navigator.of(context).pushReplacementNamed('/login');
   }
 

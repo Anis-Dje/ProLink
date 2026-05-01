@@ -88,7 +88,7 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
         _loadData();
       }
     } catch (_) {
-      if (mounted) AppUtils.showSnackBar(context, 'Error lors de l\'affectation', isError: true);
+      if (mounted) AppUtils.showSnackBar(context, 'Assignment error', isError: true);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -207,7 +207,7 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
                     ElevatedButton.icon(
                       onPressed: _assign,
                       icon: const Icon(Icons.assignment_turned_in_outlined),
-                      label: const Text('Confirm l\'affectation', style: TextStyle(fontSize: 15)),
+                      label: const Text('Confirm assignment', style: TextStyle(fontSize: 15)),
                       style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
                     ),
                   ],
