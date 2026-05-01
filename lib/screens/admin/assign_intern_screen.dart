@@ -59,15 +59,15 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
 
   Future<void> _assign() async {
     if (_selectedIntern == null) {
-      AppUtils.showSnackBar(context, 'Sélectionner un stagiaire', isError: true);
+      AppUtils.showSnackBar(context, 'Select an intern', isError: true);
       return;
     }
     if (_selectedMentor == null) {
-      AppUtils.showSnackBar(context, 'Sélectionner un encadreur', isError: true);
+      AppUtils.showSnackBar(context, 'Select a mentor', isError: true);
       return;
     }
     if (_selectedDepartment == null) {
-      AppUtils.showSnackBar(context, 'Sélectionner un département', isError: true);
+      AppUtils.showSnackBar(context, 'Select a department', isError: true);
       return;
     }
 
@@ -79,7 +79,7 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
             _selectedDepartment!,
           );
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Affectation réussie');
+        AppUtils.showSnackBar(context, 'Assignment successful');
         setState(() {
           _selectedIntern = null;
           _selectedMentor = null;
@@ -88,7 +88,7 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
         _loadData();
       }
     } catch (_) {
-      if (mounted) AppUtils.showSnackBar(context, 'Erreur lors de l\'affectation', isError: true);
+      if (mounted) AppUtils.showSnackBar(context, 'Error lors de l\'affectation', isError: true);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -98,11 +98,11 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
   Widget build(BuildContext context) {
     return LoadingOverlay(
       isLoading: _saving,
-      message: 'Affectation en cours...',
+      message: 'Assigning...',
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text('Affecter un Stagiaire'),
+          title: const Text('Assign an Intern'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
             onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/dashboard', (route) => false),
@@ -116,7 +116,7 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _SectionCard(
-                      title: 'Sélectionner un Stagiaire',
+                      title: 'Select an Intern',
                       icon: Icons.person_outlined,
                       child: Column(
                         children: [
@@ -124,7 +124,7 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
                             onChanged: (v) => setState(() => _searchIntern = v),
                             style: const TextStyle(color: AppColors.textPrimary),
                             decoration: const InputDecoration(
-                              hintText: 'Rechercher...',
+                              hintText: 'Search...',
                               prefixIcon: Icon(Icons.search),
                             ),
                           ),
@@ -164,14 +164,14 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
                     ),
                     const SizedBox(height: 16),
                     _SectionCard(
-                      title: 'Sélectionner un Encadreur',
+                      title: 'Select a Mentor',
                       icon: Icons.supervisor_account_outlined,
                       child: DropdownButtonFormField<UserModel>(
                         initialValue: _selectedMentor,
                         style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins'),
                         dropdownColor: AppColors.surface,
                         decoration: const InputDecoration(
-                          hintText: 'Choisir un encadreur',
+                          hintText: 'Choose a mentor',
                           prefixIcon: Icon(Icons.person_search_outlined),
                         ),
                         items: _mentors.map((m) => DropdownMenuItem(
@@ -183,14 +183,14 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
                     ),
                     const SizedBox(height: 16),
                     _SectionCard(
-                      title: 'Département',
+                      title: 'Department',
                       icon: Icons.business_outlined,
                       child: DropdownButtonFormField<String>(
                         initialValue: _selectedDepartment,
                         style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins'),
                         dropdownColor: AppColors.surface,
                         decoration: const InputDecoration(
-                          hintText: 'Choisir un département',
+                          hintText: 'Choose a department',
                           prefixIcon: Icon(Icons.corporate_fare_outlined),
                         ),
                         items: AppConstants.departments.map((d) => DropdownMenuItem(
@@ -207,7 +207,7 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
                     ElevatedButton.icon(
                       onPressed: _assign,
                       icon: const Icon(Icons.assignment_turned_in_outlined),
-                      label: const Text('Confirmer l\'affectation', style: TextStyle(fontSize: 15)),
+                      label: const Text('Confirm l\'affectation', style: TextStyle(fontSize: 15)),
                       style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
                     ),
                   ],
@@ -228,15 +228,15 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Résumé de l\'affectation',
+          const Text('Assignment summary',
               style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.accent)),
           const SizedBox(height: 8),
           if (_selectedIntern != null)
-            _SummaryRow('Stagiaire', _selectedIntern!.fullName),
+            _SummaryRow('Intern', _selectedIntern!.fullName),
           if (_selectedMentor != null)
-            _SummaryRow('Encadreur', _selectedMentor!.fullName),
+            _SummaryRow('Mentor', _selectedMentor!.fullName),
           if (_selectedDepartment != null)
-            _SummaryRow('Département', _selectedDepartment!),
+            _SummaryRow('Department', _selectedDepartment!),
         ],
       ),
     );

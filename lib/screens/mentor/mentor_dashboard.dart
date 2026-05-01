@@ -56,7 +56,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Pro-Link Encadreur'),
+        title: const Text('Pro-Link Mentor'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_outlined),
@@ -98,11 +98,11 @@ class _MentorDashboardState extends State<MentorDashboard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Bienvenue,',
+              const Text('Welcome,',
                   style: TextStyle(
                       fontSize: 14, color: AppColors.textSecondary)),
               Text(
-                _currentUser?.fullName ?? 'Encadreur',
+                _currentUser?.fullName ?? 'Mentor',
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
@@ -125,7 +125,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
               Icon(Icons.supervisor_account,
                   color: AppColors.accent, size: 16),
               SizedBox(width: 6),
-              Text('Encadreur',
+              Text('Mentor',
                   style: TextStyle(
                       color: AppColors.accent,
                       fontSize: 12,
@@ -151,26 +151,26 @@ class _MentorDashboardState extends State<MentorDashboard> {
       childAspectRatio: 1.05,
       children: [
         StatsCard(
-          title: 'Mes Stagiaires',
+          title: 'My Interns',
           value: '${_assignedInterns.length}',
           icon: Icons.groups_outlined,
           color: AppColors.accent,
           onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/interns', (route) => false),
         ),
         StatsCard(
-          title: 'Actifs',
+          title: 'Active',
           value: '$active',
           icon: Icons.check_circle_outline,
           color: AppColors.success,
         ),
         StatsCard(
-          title: 'Départements',
+          title: 'Departments',
           value: '$departments',
           icon: Icons.business_center_outlined,
           color: AppColors.gold,
         ),
         StatsCard(
-          title: 'Cette semaine',
+          title: 'This week',
           value: '7j',
           icon: Icons.calendar_today_outlined,
           color: AppColors.warning,
@@ -185,7 +185,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Actions rapides',
+          'Quick actions',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -199,9 +199,9 @@ class _MentorDashboardState extends State<MentorDashboard> {
           children: [
             _actionChip(Icons.star_outline, 'Évaluer',
                 () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/evaluate', (route) => false)),
-            _actionChip(Icons.fact_check_outlined, 'Présences',
+            _actionChip(Icons.fact_check_outlined, 'Attendance',
                 () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/attendance', (route) => false)),
-            _actionChip(Icons.upload_file_outlined, 'Support',
+            _actionChip(Icons.upload_file_outlined, 'Material',
                 () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/training', (route) => false)),
           ],
         ),
@@ -233,7 +233,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
             Icon(Icons.people_outline,
                 size: 48, color: AppColors.textSecondary),
             SizedBox(height: 12),
-            Text('Aucun stagiaire affecté pour le moment',
+            Text('No interns assigned yet',
                 style: TextStyle(color: AppColors.textSecondary)),
           ],
         ),
@@ -247,7 +247,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'Mes stagiaires',
+              'My interns',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -256,7 +256,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/interns', (route) => false),
-              child: const Text('Voir tout'),
+              child: const Text('See all'),
             ),
           ],
         ),

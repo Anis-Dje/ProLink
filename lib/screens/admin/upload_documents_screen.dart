@@ -1,6 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 
+import 'package:cross_file/cross_file.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
@@ -67,11 +67,11 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
   Widget build(BuildContext context) {
     return LoadingOverlay(
       isLoading: _uploading,
-      message: 'Téléversement en cours...',
+      message: 'Uploading...',
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text('Documents & Plannings'),
+          title: const Text('Documents & Schedules'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
             onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/dashboard', (route) => false),
@@ -82,8 +82,8 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
             unselectedLabelColor: AppColors.textSecondary,
             indicatorColor: AppColors.accent,
             tabs: const [
-              Tab(text: 'Plannings', icon: Icon(Icons.schedule)),
-              Tab(text: 'Règlements', icon: Icon(Icons.gavel_outlined)),
+              Tab(text: 'Schedules', icon: Icon(Icons.schedule)),
+              Tab(text: 'Policies', icon: Icon(Icons.gavel_outlined)),
             ],
           ),
         ),
@@ -101,7 +101,7 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
           onPressed: () =>
               _tabController.index == 0 ? _uploadSchedule() : _uploadPolicy(),
           icon: const Icon(Icons.upload_file),
-          label: const Text('Téléverser'),
+          label: const Text('Upload'),
         ),
       ),
     );
@@ -111,7 +111,7 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
     if (_schedules.isEmpty) {
       return _EmptyList(
         icon: Icons.schedule_outlined,
-        label: 'Aucun planning disponible',
+        label: 'No schedule available',
       );
     }
     return RefreshIndicator(
@@ -139,7 +139,7 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
     if (_policies.isEmpty) {
       return _EmptyList(
         icon: Icons.description_outlined,
-        label: 'Aucun règlement disponible',
+        label: 'No policy available',
       );
     }
     return RefreshIndicator(
@@ -167,23 +167,28 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'doc', 'docx', 'png', 'jpg'],
+      // Required on web (and helpful elsewhere) so the picker returns
+      // raw bytes instead of just a path.
+      withData: true,
     );
-    if (result == null || result.files.single.path == null) return;
+    final picked = result?.files.single;
+    if (picked == null) return;
+    final xfile = _xFileFromPicked(picked);
+    if (xfile == null) return;
 
-    final title = await _promptText('Titre du planning');
+    final title = await _promptText('Schedule title');
     if (title == null || title.isEmpty) return;
     final weekLabel =
-        await _promptText('Semaine (ex: Semaine 12 – Mars 2026)');
+        await _promptText('Week (e.g. Week 12 – March 2026)');
     if (weekLabel == null || weekLabel.isEmpty) return;
 
     setState(() => _uploading = true);
     try {
       final adminId =
           context.read<AuthService>().currentUser?.id ?? 'unknown';
-      final file = File(result.files.single.path!);
       final url = await context
           .read<StorageService>()
-          .uploadSchedule(adminId, file, weekLabel);
+          .uploadSchedule(adminId, xfile, weekLabel);
 
       final schedule = ScheduleModel(
         id: '',
@@ -196,12 +201,12 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
       );
       await context.read<FirestoreService>().createSchedule(schedule);
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Planning téléversé');
+        AppUtils.showSnackBar(context, 'Schedule uploaded');
       }
       _loadData();
     } catch (e) {
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Erreur: $e', isError: true);
+        AppUtils.showSnackBar(context, 'Error: $e', isError: true);
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -212,40 +217,43 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'doc', 'docx'],
+      withData: true,
     );
-    if (result == null || result.files.single.path == null) return;
+    final picked = result?.files.single;
+    if (picked == null) return;
+    final xfile = _xFileFromPicked(picked);
+    if (xfile == null) return;
 
-    final title = await _promptText('Titre du règlement');
+    final title = await _promptText('Policy title');
     if (title == null || title.isEmpty) return;
-    final description = await _promptText('Description courte') ?? '';
+    final description = await _promptText('Short description') ?? '';
 
     setState(() => _uploading = true);
     try {
       final adminId =
           context.read<AuthService>().currentUser?.id ?? 'unknown';
-      final file = File(result.files.single.path!);
       final url = await context
           .read<StorageService>()
-          .uploadPolicyDocument(adminId, file, title);
+          .uploadPolicyDocument(adminId, xfile, title);
 
       final training = TrainingFileModel(
         id: '',
         title: title,
         description: description,
         fileUrl: url,
-        fileType: p.extension(file.path).replaceFirst('.', ''),
+        fileType: p.extension(picked.name).replaceFirst('.', ''),
         uploadedBy: adminId,
         uploadDate: DateTime.now(),
         tags: const ['policy'],
       );
       await context.read<FirestoreService>().createTrainingFile(training);
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Règlement téléversé');
+        AppUtils.showSnackBar(context, 'Policy uploaded');
       }
       _loadData();
     } catch (e) {
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Erreur: $e', isError: true);
+        AppUtils.showSnackBar(context, 'Error: $e', isError: true);
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -255,18 +263,18 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
   Future<void> _deleteSchedule(ScheduleModel s) async {
     final confirm = await AppUtils.showConfirmDialog(
       context,
-      title: 'Supprimer',
-      content: 'Supprimer "${s.title}" ?',
+      title: 'Delete',
+      content: 'Delete "${s.title}" ?',
     );
     if (confirm != true) return;
     try {
       await context.read<StorageService>().deleteFile(s.fileUrl);
       await context.read<FirestoreService>().deleteSchedule(s.id);
-      if (mounted) AppUtils.showSnackBar(context, 'Supprimé');
+      if (mounted) AppUtils.showSnackBar(context, 'Deleted');
       _loadData();
     } catch (_) {
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Erreur de suppression', isError: true);
+        AppUtils.showSnackBar(context, 'Delete error', isError: true);
       }
     }
   }
@@ -274,20 +282,37 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
   Future<void> _deletePolicy(TrainingFileModel f) async {
     final confirm = await AppUtils.showConfirmDialog(
       context,
-      title: 'Supprimer',
-      content: 'Supprimer "${f.title}" ?',
+      title: 'Delete',
+      content: 'Delete "${f.title}" ?',
     );
     if (confirm != true) return;
     try {
       await context.read<StorageService>().deleteFile(f.fileUrl);
       await context.read<FirestoreService>().deleteTrainingFile(f.id);
-      if (mounted) AppUtils.showSnackBar(context, 'Supprimé');
+      if (mounted) AppUtils.showSnackBar(context, 'Deleted');
       _loadData();
     } catch (_) {
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Erreur de suppression', isError: true);
+        AppUtils.showSnackBar(context, 'Delete error', isError: true);
       }
     }
+  }
+
+  /// Builds an `XFile` from the `file_picker` result. Uses bytes when
+  /// running on Flutter web (where `path` is empty) and the file path
+  /// otherwise, so the same upload code works on every platform.
+  XFile? _xFileFromPicked(PlatformFile picked) {
+    if (picked.bytes != null) {
+      return XFile.fromData(
+        picked.bytes!,
+        name: picked.name,
+        length: picked.size,
+      );
+    }
+    if (picked.path != null) {
+      return XFile(picked.path!, name: picked.name);
+    }
+    return null;
   }
 
   Future<String?> _promptText(String label) async {
@@ -305,11 +330,11 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler'),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Valider'),
+            child: const Text('Submit'),
           ),
         ],
       ),

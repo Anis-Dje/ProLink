@@ -1,6 +1,7 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
+import 'package:cross_file/cross_file.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_colors.dart';
@@ -33,7 +34,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
-  File? _profilePhoto;
+  XFile? _profilePhoto;
+  Uint8List? _profilePhotoBytes;
 
   @override
   void dispose() {
@@ -55,7 +57,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       maxWidth: 600,
     );
     if (picked != null) {
-      setState(() => _profilePhoto = File(picked.path));
+      // Read bytes here so the preview works on every platform (web in
+      // particular, where `Image.file` can't be used).
+      final bytes = await picked.readAsBytes();
+      if (!mounted) return;
+      setState(() {
+        _profilePhoto = picked;
+        _profilePhotoBytes = bytes;
+      });
     }
   }
 
@@ -92,7 +101,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           if (mounted) {
             AppUtils.showSnackBar(
               context,
-              'Compte créé, mais la photo n\'a pas pu être envoyée.',
+              'Account created, but the photo could not be uploaded.',
               isError: true,
             );
           }
@@ -105,15 +114,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       Navigator.of(context).pushNamedAndRemoveUntil('/pending', (route) => false);
     } catch (e) {
       if (mounted) {
-        String msg = 'Erreur lors de l\'inscription. Réessayez.';
+        String msg = 'Registration error. Please try again.';
 
         if (e is ApiException) {
           if (e.error == 'email_in_use') {
-            msg = 'Cet email est déjà utilisé';
+            msg = 'This email is already in use';
           } else if (e.statusCode == 400) {
             msg = e.messageOrError;
           } else if (e.statusCode >= 500) {
-            msg = 'Erreur serveur. Vérifiez que le backend et la base de données sont bien lancés.';
+            msg = 'Server error. Make sure the backend and database are running.';
           } else {
             msg = e.messageOrError;
           }
@@ -121,14 +130,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           final raw = e.toString();
           if (raw.contains('email_in_use') ||
               raw.contains('Email already registered')) {
-            msg = 'Cet email est déjà utilisé';
+            msg = 'This email is already in use';
           } else if (raw.contains('>=6 chars') ||
               raw.contains('weak-password')) {
-            msg = 'Mot de passe trop faible';
+            msg = 'Password too weak';
           } else if (raw.contains('SocketException') ||
               raw.contains('Connection refused') ||
               raw.contains('Failed host lookup')) {
-            msg = 'Impossible de contacter le serveur. Vérifiez que le backend est lancé.';
+            msg = 'Cannot reach the server. Make sure the backend is running.';
           }
         }
 
@@ -143,11 +152,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return LoadingOverlay(
       isLoading: _isLoading,
-      message: 'Création du compte...',
+      message: 'Creating account...',
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text('Nouveau compte stagiaire'),
+          title: const Text('New intern account'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
             onPressed: () => Navigator.of(context).pop(),
@@ -165,45 +174,45 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 24),
                   _buildPhotoSection(),
                   const SizedBox(height: 24),
-                  _buildSection('Informations personnelles', [
+                  _buildSection('Personal information', [
                     _buildTextField(
                       controller: _fullNameController,
-                      label: 'Nom complet',
+                      label: 'Full name',
                       icon: Icons.person_outlined,
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null,
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                     ),
                     const SizedBox(height: 14),
                     _buildTextField(
                       controller: _emailController,
-                      label: 'Email universitaire',
+                      label: 'University email',
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
                       validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'Requis';
-                        if (!v.contains('@')) return 'Email invalide';
+                        if (v == null || v.trim().isEmpty) return 'Required';
+                        if (!v.contains('@')) return 'Invalid email';
                         return null;
                       },
                     ),
                     const SizedBox(height: 14),
                     _buildTextField(
                       controller: _phoneController,
-                      label: 'Téléphone',
+                      label: 'Phone',
                       icon: Icons.phone_outlined,
                       keyboardType: TextInputType.phone,
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null,
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                     ),
                   ]),
                   const SizedBox(height: 20),
-                  _buildSection('Informations académiques', [
+                  _buildSection('Academic information', [
                     _buildTextField(
                       controller: _studentIdController,
-                      label: 'Numéro étudiant',
+                      label: 'Student ID',
                       icon: Icons.badge_outlined,
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null,
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                     ),
                     const SizedBox(height: 14),
                     _buildDropdown(
-                      label: 'Université',
+                      label: 'University',
                       icon: Icons.school_outlined,
                       value: _selectedUniversity,
                       items: AppConstants.universities,
@@ -212,13 +221,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: 14),
                     _buildTextField(
                       controller: _specializationController,
-                      label: 'Spécialité',
+                      label: 'Specialization',
                       icon: Icons.book_outlined,
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null,
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                     ),
                     const SizedBox(height: 14),
                     _buildDropdown(
-                      label: 'Département souhaité',
+                      label: 'Desired department',
                       icon: Icons.business_outlined,
                       value: _selectedDepartment,
                       items: AppConstants.departments,
@@ -226,28 +235,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ]),
                   const SizedBox(height: 20),
-                  _buildSection('Sécurité', [
+                  _buildSection('Security', [
                     _buildPasswordField(
                       controller: _passwordController,
-                      label: 'Mot de passe',
+                      label: 'Password',
                       obscure: _obscurePassword,
                       onToggle: () => setState(() => _obscurePassword = !_obscurePassword),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Requis';
-                        if (v.length < 6) return 'Minimum 6 caractères';
+                        if (v == null || v.isEmpty) return 'Required';
+                        if (v.length < 6) return 'Minimum 6 characters';
                         return null;
                       },
                     ),
                     const SizedBox(height: 14),
                     _buildPasswordField(
                       controller: _confirmPasswordController,
-                      label: 'Confirmer le mot de passe',
+                      label: 'Confirm password',
                       obscure: _obscureConfirmPassword,
                       onToggle: () =>
                           setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Requis';
-                        if (v != _passwordController.text) return 'Les mots de passe ne correspondent pas';
+                        if (v == null || v.isEmpty) return 'Required';
+                        if (v != _passwordController.text) return 'Passwords do not match';
                         return null;
                       },
                     ),
@@ -257,7 +266,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     onPressed: _register,
                     style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
                     child: const Text(
-                      'Soumettre la demande',
+                      'Submit request',
                       style: TextStyle(fontSize: 16),
                     ),
                   ),
@@ -265,10 +274,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('Déjà un compte ?', style: TextStyle(color: AppColors.textSecondary)),
+                      const Text('Already have an account?', style: TextStyle(color: AppColors.textSecondary)),
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Se connecter'),
+                        child: const Text('Log in'),
                       ),
                     ],
                   ),
@@ -296,7 +305,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Votre compte sera activé après validation par un administrateur.',
+              'Your account will be activated after validation by an administrator.',
               style: TextStyle(fontSize: 12, color: AppColors.accent),
             ),
           ),
@@ -319,8 +328,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 color: AppColors.surface,
                 border: Border.all(color: AppColors.accent, width: 2),
               ),
-              child: _profilePhoto != null
-                  ? ClipOval(child: Image.file(_profilePhoto!, fit: BoxFit.cover))
+              child: _profilePhotoBytes != null
+                  ? ClipOval(
+                      child: Image.memory(_profilePhotoBytes!,
+                          fit: BoxFit.cover, width: 100, height: 100),
+                    )
                   : const Icon(Icons.person, color: AppColors.textSecondary, size: 40),
             ),
             Positioned(

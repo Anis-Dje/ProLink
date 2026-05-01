@@ -55,7 +55,7 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Carte de Stagiaire'),
+        title: const Text('Intern ID Card'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/dashboard', (route) => false),
@@ -121,7 +121,7 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
               const SizedBox(width: 10),
               const Expanded(
                 child: Text(
-                  'Pro-Link · Carte Professionnelle',
+                  'Pro-Link · Professional ID',
                   style: TextStyle(
                     color: AppColors.accent,
                     fontSize: 11,
@@ -178,7 +178,7 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
                     const SizedBox(height: 2),
                     Text(
                       intern.specialization.isEmpty
-                          ? 'Stagiaire'
+                          ? 'Intern'
                           : intern.specialization,
                       style: const TextStyle(
                         color: AppColors.textSecondary,
@@ -223,11 +223,11 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
             ),
             child: Column(
               children: [
-                _cardRow('Matricule', intern.studentId),
+                _cardRow('ID number', intern.studentId),
                 const SizedBox(height: 4),
-                _cardRow('Département', intern.department),
+                _cardRow('Department', intern.department),
                 const SizedBox(height: 4),
-                _cardRow('Université', intern.university),
+                _cardRow('University', intern.university),
               ],
             ),
           ),
@@ -266,7 +266,7 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
           ),
           const SizedBox(height: 10),
           Text(
-            'Valide du ${AppUtils.formatDate(intern.startDate ?? intern.registrationDate)}'
+            'Valid from ${AppUtils.formatDate(intern.startDate ?? intern.registrationDate)}'
             '${intern.endDate != null ? ' au ${AppUtils.formatDate(intern.endDate!)}' : ''}',
             style: const TextStyle(
               color: AppColors.textSecondary,
@@ -336,8 +336,8 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Présentez cette carte (ou son QR code) à l\'accueil '
-              '${AppConstants.appName} lors de vos entrées/sorties.',
+              'Show this card (or its QR code) at the '
+              '${AppConstants.appName} reception when entering/leaving.',
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 11,
@@ -362,7 +362,7 @@ class _MissingData extends StatelessWidget {
           Icon(Icons.badge_outlined,
               size: 56, color: AppColors.textSecondary),
           SizedBox(height: 12),
-          Text('Impossible de charger la carte',
+          Text('Cannot load the card',
               style: TextStyle(color: AppColors.textSecondary)),
         ],
       ),

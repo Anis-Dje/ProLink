@@ -87,7 +87,7 @@ class _InternDashboardState extends State<InternDashboard> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Pro-Link Stagiaire'),
+        title: const Text('Pro-Link Intern'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_outlined),
@@ -129,11 +129,11 @@ class _InternDashboardState extends State<InternDashboard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Bonjour,',
+              const Text('Hello,',
                   style: TextStyle(
                       fontSize: 14, color: AppColors.textSecondary)),
               Text(
-                _currentUser?.fullName ?? 'Stagiaire',
+                _currentUser?.fullName ?? 'Intern',
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
@@ -158,7 +158,7 @@ class _InternDashboardState extends State<InternDashboard> {
               const SizedBox(width: 6),
               Text(
                 _internProfile == null
-                    ? 'Stagiaire'
+                    ? 'Intern'
                     : AppUtils.getStatusLabel(_internProfile!.status),
                 style: const TextStyle(
                     color: AppColors.success,
@@ -206,7 +206,7 @@ class _InternDashboardState extends State<InternDashboard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Ma carte de stagiaire',
+                    'My ID Card',
                     style: TextStyle(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w700,
@@ -215,7 +215,7 @@ class _InternDashboardState extends State<InternDashboard> {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Présentez-la à l\'entrée',
+                    'Show it at the entrance',
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
@@ -248,11 +248,11 @@ class _InternDashboardState extends State<InternDashboard> {
           color: AppColors.gold,
           subtitle: _evaluations.isEmpty
               ? null
-              : 'Moyenne ${_avgScore.toStringAsFixed(1)}/20',
+              : 'Average ${_avgScore.toStringAsFixed(1)}/20',
           onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/evaluations', (route) => false),
         ),
         StatsCard(
-          title: 'Présence',
+          title: 'Attendance',
           value: '$_presenceRate%',
           icon: Icons.check_circle_outline,
           color: _presenceRate >= 80
@@ -260,13 +260,13 @@ class _InternDashboardState extends State<InternDashboard> {
               : AppColors.warning,
         ),
         StatsCard(
-          title: 'Département',
+          title: 'Department',
           value: _internProfile?.department.split(' ').first ?? '—',
           icon: Icons.business_center_outlined,
           color: AppColors.accent,
         ),
         StatsCard(
-          title: 'Formations',
+          title: 'Training',
           value: '→',
           icon: Icons.library_books_outlined,
           color: AppColors.warning,
@@ -281,7 +281,7 @@ class _InternDashboardState extends State<InternDashboard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Accès rapide',
+          'Quick access',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -291,20 +291,20 @@ class _InternDashboardState extends State<InternDashboard> {
         const SizedBox(height: 12),
         _quickTile(
           Icons.schedule_outlined,
-          'Planning',
-          'Voir les emplois du temps',
+          'Schedule',
+          'View schedules',
           () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/schedule', (route) => false),
         ),
         _quickTile(
           Icons.library_books_outlined,
-          'Supports de cours',
-          'Accéder aux fichiers',
+          'Course materials',
+          'Access files',
           () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/training', (route) => false),
         ),
         _quickTile(
           Icons.assessment_outlined,
-          'Mes évaluations',
-          'Voir mes notes et commentaires',
+          'My evaluations',
+          'View my grades and comments',
           () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/evaluations', (route) => false),
         ),
       ],

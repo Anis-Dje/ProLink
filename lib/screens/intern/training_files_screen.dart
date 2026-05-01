@@ -86,7 +86,7 @@ class _TrainingFilesScreenState extends State<TrainingFilesScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Fermer'),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -98,7 +98,7 @@ class _TrainingFilesScreenState extends State<TrainingFilesScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Supports de cours'),
+        title: const Text('Course materials'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/dashboard', (route) => false),
@@ -109,8 +109,8 @@ class _TrainingFilesScreenState extends State<TrainingFilesScreen>
           unselectedLabelColor: AppColors.textSecondary,
           indicatorColor: AppColors.accent,
           tabs: const [
-            Tab(text: 'Formations', icon: Icon(Icons.school_outlined)),
-            Tab(text: 'Règlements', icon: Icon(Icons.gavel_outlined)),
+            Tab(text: 'Training', icon: Icon(Icons.school_outlined)),
+            Tab(text: 'Policies', icon: Icon(Icons.gavel_outlined)),
           ],
         ),
       ),
@@ -119,7 +119,7 @@ class _TrainingFilesScreenState extends State<TrainingFilesScreen>
           Padding(
             padding: const EdgeInsets.all(16),
             child: CustomSearchBar(
-              hintText: 'Rechercher un document...',
+              hintText: 'Search documents...',
               onChanged: (q) => setState(() => _query = q),
               suggestions: _suggestions,
             ),
@@ -234,7 +234,7 @@ class _Empty extends StatelessWidget {
               Icon(Icons.library_books_outlined,
                   size: 56, color: AppColors.textSecondary),
               SizedBox(height: 12),
-              Text('Aucun document',
+              Text('No documents',
                   style: TextStyle(color: AppColors.textSecondary)),
             ],
           ),

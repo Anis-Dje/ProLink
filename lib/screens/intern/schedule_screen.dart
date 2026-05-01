@@ -48,7 +48,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Lien du planning'),
+        title: const Text('Schedule link'),
         content: SelectableText(
           s.fileUrl,
           style: const TextStyle(color: AppColors.textSecondary),
@@ -56,7 +56,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Fermer'),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -68,7 +68,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Plannings'),
+        title: const Text('Schedules'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/dashboard', (route) => false),
@@ -148,7 +148,7 @@ class _ScheduleTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Publié le ${AppUtils.formatDate(schedule.uploadDate)}',
+                    'Published on ${AppUtils.formatDate(schedule.uploadDate)}',
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 11,
@@ -178,7 +178,7 @@ class _Empty extends StatelessWidget {
             children: [
               Icon(Icons.schedule, size: 56, color: AppColors.textSecondary),
               SizedBox(height: 12),
-              Text('Aucun planning disponible',
+              Text('No schedule available',
                   style: TextStyle(color: AppColors.textSecondary)),
             ],
           ),

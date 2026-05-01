@@ -10,7 +10,8 @@ import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
 import 'services/storage_service.dart';
 
-// Auth screens
+// Splash + auth screens
+import 'screens/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/pending_approval_screen.dart';
 import 'screens/auth/register_screen.dart';
@@ -82,8 +83,11 @@ class ProLinkApp extends StatelessWidget {
         theme: AppTheme.darkTheme,
         debugShowCheckedModeBanner: false,
         // Named routes — course pattern (Navigator.pushNamed, Navigator.pop).
-        home: const RootGate(),
+        // Splash is the initial route; it then pushes /login (or the
+        // appropriate dashboard if the user is already signed in).
+        home: const SplashScreen(),
         routes: {
+          AppRoutes.splash: (_) => const SplashScreen(),
           AppRoutes.login: (_) => const LoginScreen(),
           AppRoutes.register: (_) => const RegisterScreen(),
           AppRoutes.pending: (_) => const PendingApprovalScreen(),
@@ -115,6 +119,7 @@ class ProLinkApp extends StatelessWidget {
 /// course's `Navigator.pushNamed(context, '/home')` examples while making
 /// refactors easier.
 abstract class AppRoutes {
+  static const splash = '/splash';
   static const login = '/login';
   static const register = '/register';
   static const pending = '/pending';

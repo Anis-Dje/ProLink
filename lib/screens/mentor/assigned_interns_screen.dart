@@ -67,7 +67,7 @@ class _AssignedInternsScreenState extends State<AssignedInternsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Mes Stagiaires'),
+        title: const Text('My Interns'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/dashboard', (route) => false),
@@ -78,7 +78,7 @@ class _AssignedInternsScreenState extends State<AssignedInternsScreen> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: CustomSearchBar(
-              hintText: 'Rechercher...',
+              hintText: 'Search...',
               onChanged: (q) => setState(() => _query = q),
             ),
           ),
@@ -148,10 +148,10 @@ class _AssignedInternsScreenState extends State<AssignedInternsScreen> {
             Text(intern.email,
                 style: const TextStyle(color: AppColors.textSecondary)),
             const SizedBox(height: 14),
-            _row('Département', intern.department),
-            _row('Spécialité', intern.specialization),
-            _row('Téléphone', intern.phone),
-            _row('Université', intern.university),
+            _row('Department', intern.department),
+            _row('Specialization', intern.specialization),
+            _row('Phone', intern.phone),
+            _row('University', intern.university),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -173,7 +173,7 @@ class _AssignedInternsScreenState extends State<AssignedInternsScreen> {
                       Navigator.of(context).pushNamedAndRemoveUntil('/mentor/attendance', (route) => false);
                     },
                     icon: const Icon(Icons.calendar_today_outlined),
-                    label: const Text('Présence'),
+                    label: const Text('Attendance'),
                   ),
                 ),
               ],
@@ -220,7 +220,7 @@ class _Empty extends StatelessWidget {
           Icon(Icons.people_outline,
               size: 56, color: AppColors.textSecondary),
           SizedBox(height: 12),
-          Text('Aucun stagiaire affecté',
+          Text('No interns assigned',
               style: TextStyle(color: AppColors.textSecondary)),
         ],
       ),

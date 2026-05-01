@@ -32,7 +32,7 @@ class PendingApprovalScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
                 const Text(
-                  'Compte en attente',
+                  'Account Pending',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
@@ -42,7 +42,7 @@ class PendingApprovalScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Votre demande de stage a bien été reçue.\n\nUn administrateur examinera votre dossier et vous notifiera par email une fois votre compte approuvé.',
+                  'Your internship request has been received.\n\nAn administrator will review your file and notify you by email once your account is approved.',
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary,
@@ -64,7 +64,7 @@ class PendingApprovalScreen extends StatelessWidget {
                       SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Ce processus peut prendre 24 à 48 heures ouvrables.',
+                          'This process can take 24 to 48 business hours.',
                           style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                         ),
                       ),
@@ -75,7 +75,7 @@ class PendingApprovalScreen extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false),
                   icon: const Icon(Icons.logout, size: 18),
-                  label: const Text('Retour à la connexion'),
+                  label: const Text('Back to login'),
                 ),
               ],
             ),

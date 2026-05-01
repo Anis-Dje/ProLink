@@ -15,7 +15,7 @@ class AppUtils {
   }
 
   static String formatDateLong(DateTime date) {
-    return DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(date);
+    return DateFormat('EEEE, MMMM d, yyyy').format(date);
   }
 
   static Color getStatusColor(String status) {
@@ -36,13 +36,13 @@ class AppUtils {
   static String getStatusLabel(String status) {
     switch (status) {
       case AppConstants.statusActive:
-        return 'Actif';
+        return 'Active';
       case AppConstants.statusPending:
-        return 'En attente';
+        return 'Pending';
       case AppConstants.statusRejected:
-        return 'Rejeté';
+        return 'Rejected';
       case AppConstants.statusCompleted:
-        return 'Terminé';
+        return 'Completed';
       default:
         return status;
     }
@@ -66,13 +66,13 @@ class AppUtils {
   static String getAttendanceLabel(String status) {
     switch (status) {
       case AppConstants.attendancePresent:
-        return 'Présent';
+        return 'Present';
       case AppConstants.attendanceAbsent:
         return 'Absent';
       case AppConstants.attendanceLate:
-        return 'En retard';
+        return 'Late';
       case AppConstants.attendanceJustified:
-        return 'Justifié';
+        return 'Justified';
       default:
         return status;
     }
@@ -103,11 +103,11 @@ class AppUtils {
   static String getRoleLabel(String role) {
     switch (role) {
       case AppConstants.roleAdmin:
-        return 'Administrateur';
+        return 'Administrator';
       case AppConstants.roleMentor:
-        return 'Encadreur';
+        return 'Mentor';
       case AppConstants.roleIntern:
-        return 'Stagiaire';
+        return 'Intern';
       default:
         return role;
     }
@@ -139,8 +139,8 @@ class AppUtils {
     BuildContext context, {
     required String title,
     required String content,
-    String confirmText = 'Confirmer',
-    String cancelText = 'Annuler',
+    String confirmText = 'Confirm',
+    String cancelText = 'Cancel',
   }) {
     return showDialog<bool>(
       context: context,
@@ -163,8 +163,8 @@ class AppUtils {
 
   static String getWeekLabel(DateTime date) {
     final weekNumber = weekOfYear(date);
-    final month = DateFormat('MMMM yyyy', 'fr_FR').format(date);
-    return 'Semaine $weekNumber – $month';
+    final month = DateFormat('MMMM yyyy').format(date);
+    return 'Week $weekNumber – $month';
   }
 
   static int weekOfYear(DateTime date) {
