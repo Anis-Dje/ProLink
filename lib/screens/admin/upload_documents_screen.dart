@@ -10,6 +10,7 @@ import '../../models/schedule_model.dart';
 import '../../models/training_file_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/notification_service.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/common/loading_overlay.dart';
 
@@ -200,6 +201,10 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
         weekLabel: weekLabel,
       );
       await context.read<FirestoreService>().createSchedule(schedule);
+      // Bonus: surface the new schedule via local notification.
+      await NotificationService.instance.notifyScheduleChanged(
+        weekLabel: weekLabel,
+      );
       if (mounted) {
         AppUtils.showSnackBar(context, 'Schedule uploaded');
       }

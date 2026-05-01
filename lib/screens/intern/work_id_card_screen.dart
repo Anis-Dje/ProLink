@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/app_utils.dart';
@@ -232,33 +235,80 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
             ),
           ),
           const SizedBox(height: 18),
+          // Identification block + QR code side by side. The QR encodes
+          // a JSON payload with the intern id and student id, which the
+          // mentor scanner can decode to mark attendance instantly.
           Container(
             padding: const EdgeInsets.symmetric(
-                horizontal: 18, vertical: 14),
+                horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: AppColors.textPrimary,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Column(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Text(
-                  'CODE D\u2019IDENTIFICATION',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'ID NUMBER',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'PL-${intern.studentId}-${intern.id.substring(0, 6).toUpperCase()}',
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.5,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Scan QR for attendance',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  'PL-${intern.studentId}-${intern.id.substring(0, 6).toUpperCase()}',
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 2,
-                    fontFamily: 'Poppins',
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: QrImageView(
+                    data: jsonEncode({
+                      'type': 'prolink-id',
+                      'internId': intern.id,
+                      'studentId': intern.studentId,
+                      'name': user.fullName,
+                    }),
+                    version: QrVersions.auto,
+                    size: 80,
+                    backgroundColor: Colors.white,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: AppColors.primary,
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
               ],
@@ -267,7 +317,7 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
           const SizedBox(height: 10),
           Text(
             'Valid from ${AppUtils.formatDate(intern.startDate ?? intern.registrationDate)}'
-            '${intern.endDate != null ? ' au ${AppUtils.formatDate(intern.endDate!)}' : ''}',
+            '${intern.endDate != null ? ' to ${AppUtils.formatDate(intern.endDate!)}' : ''}',
             style: const TextStyle(
               color: AppColors.textSecondary,
               fontSize: 10,

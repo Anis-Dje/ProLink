@@ -233,8 +233,9 @@ class _InternDashboardState extends State<InternDashboard> {
   }
 
   Widget _buildStats() {
+    final cols = MediaQuery.of(context).size.width >= 900 ? 4 : 2;
     return GridView.count(
-      crossAxisCount: 2,
+      crossAxisCount: cols,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 14,

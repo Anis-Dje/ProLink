@@ -11,6 +11,7 @@ import '../../core/utils/app_utils.dart';
 import '../../models/training_file_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/notification_service.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/common/custom_search_bar.dart';
 import '../../widgets/common/loading_overlay.dart';
@@ -173,6 +174,8 @@ class _UploadTrainingScreenState extends State<UploadTrainingScreen> {
         tags: info.tags,
       );
       await context.read<FirestoreService>().createTrainingFile(training);
+      await NotificationService.instance
+          .notifyTrainingAdded(title: info.title);
       if (mounted) {
         AppUtils.showSnackBar(context, 'Material uploaded');
       }

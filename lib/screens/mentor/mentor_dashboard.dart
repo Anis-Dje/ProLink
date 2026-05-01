@@ -142,8 +142,9 @@ class _MentorDashboardState extends State<MentorDashboard> {
         _assignedInterns.where((i) => i.status == 'active').length;
     final departments =
         _assignedInterns.map((i) => i.department).toSet().length;
+    final cols = MediaQuery.of(context).size.width >= 900 ? 4 : 2;
     return GridView.count(
-      crossAxisCount: 2,
+      crossAxisCount: cols,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 14,
@@ -197,12 +198,16 @@ class _MentorDashboardState extends State<MentorDashboard> {
           spacing: 10,
           runSpacing: 10,
           children: [
-            _actionChip(Icons.star_outline, 'Évaluer',
+            _actionChip(Icons.star_outline, 'Evaluate',
                 () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/evaluate', (route) => false)),
             _actionChip(Icons.fact_check_outlined, 'Attendance',
                 () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/attendance', (route) => false)),
+            _actionChip(Icons.qr_code_scanner_outlined, 'Scan QR',
+                () => Navigator.of(context).pushNamed('/mentor/scan-attendance')),
             _actionChip(Icons.upload_file_outlined, 'Material',
                 () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/training', (route) => false)),
+            _actionChip(Icons.bar_chart_outlined, 'Analytics',
+                () => Navigator.of(context).pushNamed('/analytics')),
           ],
         ),
       ],

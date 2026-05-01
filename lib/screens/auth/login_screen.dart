@@ -112,9 +112,14 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Column(
+          child: Center(
+            child: ConstrainedBox(
+              // Cap the width on tablets / web so the form doesn't span
+              // the entire viewport.
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: Column(
               children: [
                 const SizedBox(height: 60),
                 _buildLogo(),
@@ -124,6 +129,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 _buildRegisterLink(),
                 const SizedBox(height: 40),
               ],
+            ),
+              ),
             ),
           ),
         ),

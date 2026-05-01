@@ -8,6 +8,7 @@ import '../../models/evaluation_model.dart';
 import '../../models/intern_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/notification_service.dart';
 import '../../widgets/common/loading_overlay.dart';
 
 /// Allows mentors to create a new performance evaluation for one of
@@ -102,6 +103,13 @@ class _EvaluateInternScreenState extends State<EvaluateInternScreen> {
       );
 
       await context.read<FirestoreService>().createEvaluation(evaluation);
+      // Bonus: notify the intern locally that a new evaluation arrived.
+      // It runs on the mentor's device but mirrors the production push
+      // notification flow that would be triggered server-side.
+      await NotificationService.instance.notifyEvaluationReceived(
+        mentorName: mentor.fullName,
+        score: _overall,
+      );
       if (mounted) {
         AppUtils.showSnackBar(context, 'Evaluation saved');
         _titleController.clear();

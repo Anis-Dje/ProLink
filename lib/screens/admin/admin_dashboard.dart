@@ -141,8 +141,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildStatsGrid() {
+    // Responsive: phones get 2 columns, tablets/web get 4 so the
+    // dashboard stays readable across screen sizes.
+    final width = MediaQuery.of(context).size.width;
+    final cols = width >= 900 ? 4 : 2;
     return GridView.count(
-      crossAxisCount: 2,
+      crossAxisCount: cols,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 14,
@@ -191,7 +195,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ),
         const SizedBox(height: 14),
         GridView.count(
-          crossAxisCount: 3,
+          crossAxisCount: MediaQuery.of(context).size.width >= 900 ? 6 : 3,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisSpacing: 12,
@@ -225,8 +229,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
             _QuickActionCard(
               icon: Icons.analytics_outlined,
-              label: 'Reports',
-              onTap: () {},
+              label: 'Analytics',
+              onTap: () => Navigator.of(context).pushNamed('/analytics'),
             ),
           ],
         ),
