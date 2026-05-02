@@ -18,5 +18,5 @@ if "%DATABASE_URL%"=="" (
 )
 echo [pro-link] starting dev server on http://0.0.0.0:8081
 echo [pro-link] using php.ini: %~dp0php.ini
-php -c "%~dp0php.ini" -S 0.0.0.0:8081 router.php
+php -c "%~dp0php.ini" -S 0.0.0.0:8081 -t "%~dp0." "%~dp0router.php"
 endlocal
