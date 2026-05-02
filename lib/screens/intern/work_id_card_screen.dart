@@ -93,6 +93,7 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
       maxWidth: 1024,
     );
     if (picked == null || _user == null) return;
+    if (!mounted) return;
     setState(() => _saving = true);
     try {
       final url = await context
