@@ -158,7 +158,19 @@ function pro_link_public_base_url(): string {
     if ($env !== false && $env !== '') {
         return rtrim($env, '/');
     }
-    $proto = (($_SERVER['HTTPS'] ?? '') === 'on') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8080';
+    // Honor reverse-proxy headers so uploaded file URLs resolve to the
+    // public hostname when the PHP dev server sits behind ngrok /
+    // Cloudflare / nginx. Without this we'd build localhost:8081 URLs
+    // that the phone cannot reach.
+    $proto = ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? null);
+    if (!$proto) {
+        $proto = (($_SERVER['HTTPS'] ?? '') === 'on') ? 'https' : 'http';
+    }
+    $host = $_SERVER['HTTP_X_FORWARDED_HOST']
+        ?? $_SERVER['HTTP_HOST']
+        ?? 'localhost:8080';
+    // Forwarded headers can carry a comma-separated chain — keep the first.
+    $host = trim(explode(',', $host)[0]);
+    $proto = trim(explode(',', $proto)[0]);
     return $proto . '://' . $host;
 }

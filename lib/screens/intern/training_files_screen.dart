@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_utils.dart';
+import '../../core/utils/file_launcher.dart';
 import '../../models/training_file_model.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/common/custom_search_bar.dart';
@@ -71,22 +72,45 @@ class _TrainingFilesScreenState extends State<TrainingFilesScreen>
       .toSet()
       .toList();
 
-  // Same pattern as the schedule screen: we show the URL in a dialog
-  // because launching an external browser isn't in the course's scope.
   void _open(TrainingFileModel f) {
     showDialog<void>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
         title: Text(f.title),
-        content: SelectableText(
-          f.fileUrl,
-          style: const TextStyle(color: AppColors.textSecondary),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (f.description.isNotEmpty) ...[
+              Text(f.description,
+                  style: const TextStyle(color: AppColors.textPrimary)),
+              const SizedBox(height: 8),
+            ],
+            const Text('File link:',
+                style: TextStyle(color: AppColors.textSecondary)),
+            const SizedBox(height: 4),
+            SelectableText(
+              f.fileUrl,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Close'),
+          ),
+          FilledButton.icon(
+            icon: const Icon(Icons.open_in_new),
+            label: const Text('Open / Download'),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              FileLauncher.open(context, f.fileUrl);
+            },
           ),
         ],
       ),

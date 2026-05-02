@@ -4,6 +4,7 @@ import 'package:table_calendar/table_calendar.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_utils.dart';
+import '../../core/utils/file_launcher.dart';
 import '../../models/schedule_model.dart';
 import '../../services/firestore_service.dart';
 
@@ -57,7 +58,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   void _open(ScheduleModel s) {
     showDialog<void>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
         title: Text(s.title),
         content: SingleChildScrollView(
@@ -87,8 +88,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Close'),
+          ),
+          FilledButton.icon(
+            icon: const Icon(Icons.open_in_new),
+            label: const Text('Open / Download'),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              FileLauncher.open(context, s.fileUrl);
+            },
           ),
         ],
       ),

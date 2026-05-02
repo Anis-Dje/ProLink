@@ -37,6 +37,9 @@ dependencies:
   # Local push notifications.
   flutter_local_notifications: ^17.2.3
   timezone: ^0.9.4
+  # Opens uploaded schedules / training files / policy PDFs in the
+  # device's default viewer (browser, PDF reader, etc.).
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:
