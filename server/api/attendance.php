@@ -37,8 +37,12 @@ if ($method === 'GET') {
         $r['internId'] = $r['intern_id'];
         $r['mentorId'] = $r['mentor_id'];
         // Flutter AttendanceModel.fromJson reads `date`; keep both for
-        // forward compatibility.
-        $iso = pro_link_iso($r['attendance_date'] . ' 00:00:00');
+        // forward compatibility. attendance_date is a DATE column with no
+        // time component, so emit it as ISO UTC midnight directly without
+        // routing through DateTimeImmutable (which would reinterpret the
+        // value as PHP's default-timezone midnight and shift the day for
+        // any non-UTC server, e.g. WAT/CET).
+        $iso = $r['attendance_date'] . 'T00:00:00.000Z';
         $r['attendanceDate'] = $iso;
         $r['date'] = $iso;
         $r['createdAt'] = pro_link_iso($r['created_at']);
@@ -75,7 +79,8 @@ if ($method === 'POST') {
     $r = $ins->fetch();
     $r['internId'] = $r['intern_id'];
     $r['mentorId'] = $r['mentor_id'];
-    $iso = pro_link_iso($r['attendance_date'] . ' 00:00:00');
+    // See GET branch above for why we don't route through DateTimeImmutable.
+    $iso = $r['attendance_date'] . 'T00:00:00.000Z';
     $r['attendanceDate'] = $iso;
     $r['date'] = $iso;
     $r['createdAt'] = pro_link_iso($r['created_at']);

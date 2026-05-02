@@ -160,7 +160,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
           value: '${_assignedInterns.length}',
           icon: Icons.groups_outlined,
           color: AppColors.accent,
-          onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/interns', (route) => false),
+          onTap: () => Navigator.of(context).pushNamed('/mentor/interns'),
         ),
         StatsCard(
           title: 'Active',
@@ -179,7 +179,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
           value: '7j',
           icon: Icons.calendar_today_outlined,
           color: AppColors.warning,
-          onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/attendance', (route) => false),
+          onTap: () => Navigator.of(context).pushNamed('/mentor/attendance'),
         ),
       ],
     );
@@ -203,13 +203,13 @@ class _MentorDashboardState extends State<MentorDashboard> {
           runSpacing: 10,
           children: [
             _actionChip(Icons.star_outline, 'Evaluate',
-                () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/evaluate', (route) => false)),
+                () => Navigator.of(context).pushNamed('/mentor/evaluate')),
             _actionChip(Icons.fact_check_outlined, 'Attendance',
-                () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/attendance', (route) => false)),
+                () => Navigator.of(context).pushNamed('/mentor/attendance')),
             _actionChip(Icons.qr_code_scanner_outlined, 'Scan QR',
                 () => Navigator.of(context).pushNamed('/mentor/scan-attendance')),
             _actionChip(Icons.upload_file_outlined, 'Material',
-                () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/training', (route) => false)),
+                () => Navigator.of(context).pushNamed('/mentor/training')),
             _actionChip(Icons.bar_chart_outlined, 'Analytics',
                 () => Navigator.of(context).pushNamed('/analytics')),
           ],
@@ -264,7 +264,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
               ),
             ),
             TextButton(
-              onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/interns', (route) => false),
+              onPressed: () => Navigator.of(context).pushNamed('/mentor/interns'),
               child: const Text('See all'),
             ),
           ],

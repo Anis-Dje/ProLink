@@ -251,8 +251,15 @@ class _NavItem extends StatelessWidget {
           ),
         ),
         onTap: () {
+          // Close the drawer, then pop back to whichever dashboard is at
+          // the bottom of the stack and push the new section on top of
+          // it. That way the Android system back button returns to the
+          // dashboard instead of exiting the app.
           Navigator.pop(context);
-          Navigator.of(context).pushNamedAndRemoveUntil(route, (r) => false);
+          Navigator.of(context).popUntil((r) => r.isFirst);
+          if (ModalRoute.of(context)?.settings.name != route) {
+            Navigator.of(context).pushNamed(route);
+          }
         },
       ),
     );

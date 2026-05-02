@@ -103,8 +103,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         title: const Text('Schedules'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => Navigator.of(context)
-              .pushNamedAndRemoveUntil('/intern/dashboard', (route) => false),
+          onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: _loading

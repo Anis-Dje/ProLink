@@ -90,7 +90,7 @@ class _ManageInternsScreenState extends State<ManageInternsScreen>
         title: const Text('Manage Interns'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/dashboard', (route) => false),
+          onPressed: () => Navigator.of(context).pop(),
         ),
         bottom: TabBar(
           controller: _tabController,

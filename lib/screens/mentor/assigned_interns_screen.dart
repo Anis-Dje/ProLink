@@ -70,7 +70,7 @@ class _AssignedInternsScreenState extends State<AssignedInternsScreen> {
         title: const Text('My Interns'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/dashboard', (route) => false),
+          onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: Column(
@@ -105,7 +105,7 @@ class _AssignedInternsScreenState extends State<AssignedInternsScreen> {
                                   icon: const Icon(Icons.star_outline,
                                       color: AppColors.gold),
                                   onPressed: () =>
-                                      Navigator.of(context).pushNamedAndRemoveUntil('/mentor/evaluate', (route) => false),
+                                      Navigator.of(context).pushNamed('/mentor/evaluate'),
                                 ),
                               ],
                             ),
@@ -159,7 +159,7 @@ class _AssignedInternsScreenState extends State<AssignedInternsScreen> {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      Navigator.of(context).pushNamedAndRemoveUntil('/mentor/evaluate', (route) => false);
+                      Navigator.of(context).pushNamed('/mentor/evaluate');
                     },
                     icon: const Icon(Icons.star_outline),
                     label: const Text('Evaluate'),
@@ -170,7 +170,7 @@ class _AssignedInternsScreenState extends State<AssignedInternsScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      Navigator.of(context).pushNamedAndRemoveUntil('/mentor/attendance', (route) => false);
+                      Navigator.of(context).pushNamed('/mentor/attendance');
                     },
                     icon: const Icon(Icons.calendar_today_outlined),
                     label: const Text('Attendance'),

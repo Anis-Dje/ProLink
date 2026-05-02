@@ -140,7 +140,7 @@ class _EvaluateInternScreenState extends State<EvaluateInternScreen> {
           title: const Text('Evaluate an Intern'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
-            onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/dashboard', (route) => false),
+            onPressed: () => Navigator.of(context).pop(),
           ),
         ),
         body: _loading

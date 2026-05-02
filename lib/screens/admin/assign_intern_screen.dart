@@ -105,7 +105,7 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
           title: const Text('Assign an Intern'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
-            onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/dashboard', (route) => false),
+            onPressed: () => Navigator.of(context).pop(),
           ),
         ),
         body: _loading

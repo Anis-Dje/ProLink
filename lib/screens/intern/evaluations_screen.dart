@@ -68,7 +68,7 @@ class _EvaluationsScreenState extends State<EvaluationsScreen> {
         title: const Text('My Evaluations'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/dashboard', (route) => false),
+          onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: _loading

@@ -233,8 +233,7 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
         title: const Text('My Profile'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => Navigator.of(context)
-              .pushNamedAndRemoveUntil('/intern/dashboard', (route) => false),
+          onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: _loading
@@ -388,10 +387,35 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
 
   // ─── Work-ID card ──────────────────────────────────────────────
 
+  /// Encoded QR payload — used by both the on-card preview and the
+  /// fullscreen scan-friendly view.
+  String get _qrPayload => jsonEncode({
+        'type': 'prolink-id',
+        'internId': _intern!.id,
+        'studentId': _intern!.studentId,
+        'name': _user!.fullName,
+      });
+
+  /// Opens a fullscreen, high-contrast QR view so a mentor's camera can
+  /// lock on quickly even from a distance. Tap anywhere to dismiss.
+  void _openFullscreenQr() {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      fullscreenDialog: true,
+      builder: (_) => _FullscreenQrView(
+        payload: _qrPayload,
+        title: _user!.fullName,
+        subtitle:
+            'PL-${_intern!.studentId}-${_intern!.id.substring(0, 6).toUpperCase()}',
+      ),
+    ));
+  }
+
   Widget _buildCard() {
     final user = _user!;
     final intern = _intern!;
-    return Container(
+    return GestureDetector(
+      onTap: _openFullscreenQr,
+      child: Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -592,12 +616,7 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: QrImageView(
-                    data: jsonEncode({
-                      'type': 'prolink-id',
-                      'internId': intern.id,
-                      'studentId': intern.studentId,
-                      'name': user.fullName,
-                    }),
+                    data: _qrPayload,
                     version: QrVersions.auto,
                     size: 80,
                     backgroundColor: Colors.white,
@@ -623,7 +642,25 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
               fontSize: 10,
             ),
           ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.touch_app_outlined,
+                  color: AppColors.accent.withAlpha(180), size: 12),
+              const SizedBox(width: 4),
+              Text(
+                'Tap to enlarge for scanning',
+                style: TextStyle(
+                  color: AppColors.accent.withAlpha(220),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ],
+      ),
       ),
     );
   }
@@ -702,6 +739,104 @@ class _MissingData extends StatelessWidget {
           Text('Cannot load profile',
               style: TextStyle(color: AppColors.textSecondary)),
         ],
+      ),
+    );
+  }
+}
+
+/// Fullscreen QR view that the intern shows to a mentor's scanner. The
+/// QR is sized at ~80% of the shorter screen edge with high-contrast
+/// black-on-white modules so the camera can lock on quickly even from
+/// a distance. Tap anywhere to dismiss.
+class _FullscreenQrView extends StatelessWidget {
+  final String payload;
+  final String title;
+  final String subtitle;
+
+  const _FullscreenQrView({
+    required this.payload,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final qrSize = (size.shortestSide * 0.82).clamp(240.0, 520.0);
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => Navigator.of(context).pop(),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.cardBorder, width: 0.5),
+                  ),
+                  child: QrImageView(
+                    data: payload,
+                    version: QrVersions.auto,
+                    size: qrSize,
+                    backgroundColor: Colors.white,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: Colors.black,
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.touch_app_outlined,
+                        color: AppColors.primary.withAlpha(180), size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Tap anywhere to close',
+                      style: TextStyle(
+                        color: AppColors.primary.withAlpha(180),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
