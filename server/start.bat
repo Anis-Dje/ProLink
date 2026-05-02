@@ -29,5 +29,9 @@ php ^
   -d memory_limit=256M ^
   -d max_execution_time=60 ^
   -d max_input_time=60 ^
+  -d opcache.enable_cli=0 ^
+  -d opcache.enable=0 ^
+  -d opcache.validate_timestamps=1 ^
+  -d opcache.revalidate_freq=0 ^
   -S 0.0.0.0:8081 -t "%~dp0." "%~dp0router.php"
 endlocal
