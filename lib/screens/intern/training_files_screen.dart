@@ -101,7 +101,7 @@ class _TrainingFilesScreenState extends State<TrainingFilesScreen>
         title: const Text('Course materials'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/dashboard', (route) => false),
+          onPressed: () => Navigator.of(context).pop(),
         ),
         bottom: TabBar(
           controller: _tabController,

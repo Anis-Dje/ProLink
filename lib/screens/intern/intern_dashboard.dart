@@ -223,7 +223,7 @@ class _InternDashboardState extends State<InternDashboard> {
 
   Widget _buildIdCardTeaser() {
     return GestureDetector(
-      onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/id-card', (route) => false),
+      onTap: () => Navigator.of(context).pushNamed('/intern/id-card'),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -299,7 +299,7 @@ class _InternDashboardState extends State<InternDashboard> {
           subtitle: _evaluations.isEmpty
               ? null
               : 'Average ${_avgScore.toStringAsFixed(1)}/20',
-          onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/evaluations', (route) => false),
+          onTap: () => Navigator.of(context).pushNamed('/intern/evaluations'),
         ),
         StatsCard(
           title: 'Attendance',
@@ -320,7 +320,7 @@ class _InternDashboardState extends State<InternDashboard> {
           value: '→',
           icon: Icons.library_books_outlined,
           color: AppColors.warning,
-          onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/training', (route) => false),
+          onTap: () => Navigator.of(context).pushNamed('/intern/training'),
         ),
       ],
     );
@@ -343,19 +343,19 @@ class _InternDashboardState extends State<InternDashboard> {
           Icons.schedule_outlined,
           'Schedule',
           'View schedules',
-          () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/schedule', (route) => false),
+          () => Navigator.of(context).pushNamed('/intern/schedule'),
         ),
         _quickTile(
           Icons.library_books_outlined,
           'Course materials',
           'Access files',
-          () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/training', (route) => false),
+          () => Navigator.of(context).pushNamed('/intern/training'),
         ),
         _quickTile(
           Icons.assessment_outlined,
           'My evaluations',
           'View my grades and comments',
-          () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/evaluations', (route) => false),
+          () => Navigator.of(context).pushNamed('/intern/evaluations'),
         ),
       ],
     );

@@ -75,7 +75,7 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
           title: const Text('Documents & Schedules'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
-            onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/dashboard', (route) => false),
+            onPressed: () => Navigator.of(context).pop(),
           ),
           bottom: TabBar(
             controller: _tabController,

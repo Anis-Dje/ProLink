@@ -142,7 +142,7 @@ class _AttendanceTrackingScreenState extends State<AttendanceTrackingScreen> {
           title: const Text('Attendance Tracking'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
-            onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/dashboard', (route) => false),
+            onPressed: () => Navigator.of(context).pop(),
           ),
           actions: [
             IconButton(

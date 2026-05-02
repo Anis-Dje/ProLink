@@ -158,28 +158,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
           value: '$_totalInterns',
           icon: Icons.people_outline,
           color: AppColors.accent,
-          onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/interns', (route) => false),
+          onTap: () => Navigator.of(context).pushNamed('/admin/interns'),
         ),
         StatsCard(
           title: 'Active Interns',
           value: '$_activeInterns',
           icon: Icons.check_circle_outline,
           color: AppColors.success,
-          onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/interns', (route) => false),
+          onTap: () => Navigator.of(context).pushNamed('/admin/interns'),
         ),
         StatsCard(
           title: 'Pending',
           value: '${_pendingInterns.length}',
           icon: Icons.hourglass_empty_outlined,
           color: AppColors.warning,
-          onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/interns', (route) => false),
+          onTap: () => Navigator.of(context).pushNamed('/admin/interns'),
         ),
         StatsCard(
           title: 'Documents',
           value: 'Docs',
           icon: Icons.folder_outlined,
           color: AppColors.secondary,
-          onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/documents', (route) => false),
+          onTap: () => Navigator.of(context).pushNamed('/admin/documents'),
         ),
       ],
     );
@@ -205,27 +205,27 @@ class _AdminDashboardState extends State<AdminDashboard> {
             _QuickActionCard(
               icon: Icons.people_outline,
               label: 'Interns',
-              onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/interns', (route) => false),
+              onTap: () => Navigator.of(context).pushNamed('/admin/interns'),
             ),
             _QuickActionCard(
               icon: Icons.assignment_ind_outlined,
               label: 'Assignments',
-              onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/assign', (route) => false),
+              onTap: () => Navigator.of(context).pushNamed('/admin/assign'),
             ),
             _QuickActionCard(
               icon: Icons.schedule_outlined,
               label: 'Schedule',
-              onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/documents', (route) => false),
+              onTap: () => Navigator.of(context).pushNamed('/admin/documents'),
             ),
             _QuickActionCard(
               icon: Icons.folder_outlined,
               label: 'Documents',
-              onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/documents', (route) => false),
+              onTap: () => Navigator.of(context).pushNamed('/admin/documents'),
             ),
             _QuickActionCard(
               icon: Icons.manage_accounts_outlined,
               label: 'Users',
-              onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/users', (route) => false),
+              onTap: () => Navigator.of(context).pushNamed('/admin/users'),
             ),
             _QuickActionCard(
               icon: Icons.analytics_outlined,
@@ -251,7 +251,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
             if (_pendingInterns.isNotEmpty)
               TextButton(
-                onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/interns', (route) => false),
+                onPressed: () => Navigator.of(context).pushNamed('/admin/interns'),
                 child: const Text('See all'),
               ),
           ],
@@ -284,7 +284,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               padding: const EdgeInsets.only(bottom: 10),
               child: InternCard(
                 intern: intern,
-                onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/admin/interns', (route) => false),
+                onTap: () => Navigator.of(context).pushNamed('/admin/interns'),
                 actions: [
                   _ActionButton(
                     icon: Icons.check,

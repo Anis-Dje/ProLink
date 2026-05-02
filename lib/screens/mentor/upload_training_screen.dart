@@ -74,7 +74,7 @@ class _UploadTrainingScreenState extends State<UploadTrainingScreen> {
           title: const Text('Training Materials'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
-            onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/mentor/dashboard', (route) => false),
+            onPressed: () => Navigator.of(context).pop(),
           ),
         ),
         body: Column(
