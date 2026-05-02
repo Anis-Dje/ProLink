@@ -18,7 +18,13 @@ $proLinkUploadDiag = sprintf(
     $_SERVER['CONTENT_TYPE'] ?? '<missing>',
     implode(',', array_keys($_FILES))
 );
-@fwrite(STDERR, $proLinkUploadDiag . "\n");
+// php://stderr works in both CLI and built-in webserver modes; the
+// STDERR constant is only defined in pure CLI, so we use the stream.
+$proLinkErr = @fopen('php://stderr', 'w');
+if ($proLinkErr) {
+    @fwrite($proLinkErr, $proLinkUploadDiag . "\n");
+    @fclose($proLinkErr);
+}
 @file_put_contents(__DIR__ . '/../upload.log',
     date('c') . ' ' . $proLinkUploadDiag . "\n",
     FILE_APPEND);
