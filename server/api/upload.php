@@ -30,8 +30,21 @@ if ($proLinkErr) {
     FILE_APPEND);
 error_log($proLinkUploadDiag);
 
+// Helper to write a checkpoint line to upload.log so we can pinpoint
+// exactly where a failed request stopped executing.
+$proLinkLog = function (string $msg): void {
+    @file_put_contents(__DIR__ . '/../upload.log',
+        date('c') . ' [pro-link] upload.php ' . $msg . "\n",
+        FILE_APPEND);
+};
+
+$proLinkLog('checkpoint: about to connect to DB');
 $pdo = pro_link_pdo();
+$proLinkLog('checkpoint: DB connected, calling pro_link_current_user');
+$proLinkLog(sprintf('  auth_header_present=%s',
+    isset($_SERVER['HTTP_AUTHORIZATION']) ? 'yes' : 'no'));
 pro_link_current_user($pdo);
+$proLinkLog('checkpoint: auth passed');
 
 // Detect the most common silent failure on a stock PHP install: the
 // request body is bigger than `post_max_size`, in which case PHP discards
@@ -98,11 +111,28 @@ $dest = __DIR__ . '/../uploads/' . $name;
 if (!is_dir(dirname($dest))) {
     @mkdir(dirname($dest), 0775, true);
 }
+$proLinkLog(sprintf(
+    'checkpoint: about to move_uploaded_file tmp=%s dest=%s '
+        . 'tmp_exists=%s dest_dir_writable=%s',
+    $f['tmp_name'] ?? '<none>',
+    $dest,
+    (isset($f['tmp_name']) && is_file($f['tmp_name'])) ? 'yes' : 'no',
+    is_writable(dirname($dest)) ? 'yes' : 'no'
+));
 if (!move_uploaded_file($f['tmp_name'], $dest)) {
-    pro_link_fail(500, 'save_failed', 'Could not save uploaded file.');
+    $proLinkLog('checkpoint: move_uploaded_file FAILED');
+    pro_link_fail(500, 'save_failed', sprintf(
+        'Could not save uploaded file. tmp=%s dest=%s tmp_exists=%s dest_dir_writable=%s',
+        $f['tmp_name'] ?? '<none>',
+        $dest,
+        (isset($f['tmp_name']) && is_file($f['tmp_name'])) ? 'yes' : 'no',
+        is_writable(dirname($dest)) ? 'yes' : 'no'
+    ));
 }
 
+$proLinkLog('checkpoint: file saved -> ' . $dest);
 $url = pro_link_public_base_url() . '/files/' . $name;
+$proLinkLog('checkpoint: returning 201 url=' . $url);
 pro_link_ok(['url' => $url, 'filename' => $name], 201);
 
 
