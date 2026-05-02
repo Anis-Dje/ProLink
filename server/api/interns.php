@@ -12,9 +12,13 @@ pro_link_require_method('GET');
 $pdo = pro_link_pdo();
 pro_link_current_user($pdo);
 
+// Only return rows whose backing user is actually an intern. This
+// prevents stale rows (e.g. a user whose role was later changed to
+// "mentor" / "admin" but whose interns row was kept) from leaking into
+// the admin "interns" lists.
 $sql = 'SELECT i.*, u.full_name, u.email, u.profile_photo_url
           FROM interns i JOIN users u ON u.id = i.user_id';
-$where = [];
+$where = ["u.role = 'intern'"];
 $params = [];
 if (!empty($_GET['status'])) {
     $where[] = 'i.status = :status';

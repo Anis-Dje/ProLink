@@ -1,9 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/app_utils.dart';
@@ -11,9 +12,13 @@ import '../../models/intern_model.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/storage_service.dart';
 
-/// Digital Work ID card for the intern. Shown as a sleek dark card
-/// featuring photo, name, student ID, department, QR code and validity.
+/// Intern profile screen. Shows the digital Work-ID card (with QR code)
+/// alongside the intern's profile picture and lets them change it via
+/// either a local upload or a remote image URL. The route is the same
+/// `/intern/id-card` that used to host the card-only view, so existing
+/// navigation keeps working — the screen itself just grew.
 class WorkIdCardScreen extends StatefulWidget {
   const WorkIdCardScreen({super.key});
 
@@ -25,6 +30,7 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
   UserModel? _user;
   InternModel? _intern;
   bool _loading = true;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -53,15 +59,182 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
     }
   }
 
+  /// Persists a new profile photo URL on the backend then refreshes the
+  /// in-memory user so every screen (avatar shortcut, drawer, card) picks
+  /// up the change immediately.
+  Future<void> _saveProfilePhotoUrl(String url) async {
+    if (_user == null) return;
+    setState(() => _saving = true);
+    try {
+      final auth = context.read<AuthService>();
+      await auth.updateProfile(userId: _user!.id, profilePhotoUrl: url);
+      final refreshed = auth.currentUser;
+      if (mounted) {
+        setState(() {
+          _user = refreshed;
+          _saving = false;
+        });
+        AppUtils.showSnackBar(context, 'Profile picture updated');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        AppUtils.showSnackBar(context, 'Could not update photo: $e',
+            isError: true);
+      }
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
+    final picker = ImagePicker();
+    final XFile? picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1024,
+    );
+    if (picked == null || _user == null) return;
+    if (!mounted) return;
+    setState(() => _saving = true);
+    try {
+      final url = await context
+          .read<StorageService>()
+          .uploadProfilePhoto(_user!.id, picked);
+      await _saveProfilePhotoUrl(url);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        AppUtils.showSnackBar(context, 'Upload failed: $e', isError: true);
+      }
+    }
+  }
+
+  Future<void> _pickFromUrl() async {
+    final controller = TextEditingController(text: _user?.profilePhotoUrl ?? '');
+    final url = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Use image URL'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: AppColors.textPrimary),
+          decoration: const InputDecoration(
+            hintText: 'https://...',
+            prefixIcon: Icon(Icons.link),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (url == null || url.isEmpty) return;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      AppUtils.showSnackBar(context, 'URL must start with http(s)://',
+          isError: true);
+      return;
+    }
+    await _saveProfilePhotoUrl(url);
+  }
+
+  void _openChangePhotoSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.cardBorder,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Change profile picture',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined,
+                  color: AppColors.accent),
+              title: const Text('Upload from device',
+                  style: TextStyle(color: AppColors.textPrimary)),
+              subtitle: const Text('Choose an image from your gallery',
+                  style: TextStyle(
+                      color: AppColors.textSecondary, fontSize: 12)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickFromGallery();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.link, color: AppColors.accent),
+              title: const Text('Use image URL',
+                  style: TextStyle(color: AppColors.textPrimary)),
+              subtitle: const Text('Paste a public link to an image',
+                  style: TextStyle(
+                      color: AppColors.textSecondary, fontSize: 12)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickFromUrl();
+              },
+            ),
+            if (_user?.profilePhotoUrl != null &&
+                _user!.profilePhotoUrl!.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.delete_outline,
+                    color: AppColors.error),
+                title: const Text('Remove current picture',
+                    style: TextStyle(color: AppColors.error)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _saveProfilePhotoUrl('');
+                },
+              ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Intern ID Card'),
+        title: const Text('My Profile'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil('/intern/dashboard', (route) => false),
+          onPressed: () => Navigator.of(context)
+              .pushNamedAndRemoveUntil('/intern/dashboard', (route) => false),
         ),
       ),
       body: _loading
@@ -69,26 +242,157 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
               child: CircularProgressIndicator(color: AppColors.accent))
           : _user == null || _intern == null
               ? const _MissingData()
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Center(
-                    child: Column(
-                      children: [
-                        _buildCard(),
-                        const SizedBox(height: 24),
-                        _buildInfo(),
-                      ],
+              : Stack(
+                  children: [
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 520),
+                          child: Column(
+                            children: [
+                              _buildAvatarSection(),
+                              const SizedBox(height: 22),
+                              _buildCard(),
+                              const SizedBox(height: 22),
+                              _buildInfo(),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    if (_saving)
+                      Container(
+                        color: Colors.black.withAlpha(120),
+                        alignment: Alignment.center,
+                        child: const CircularProgressIndicator(
+                            color: AppColors.accent),
+                      ),
+                  ],
                 ),
     );
   }
+
+  // ─── Avatar section ────────────────────────────────────────────
+
+  Widget _buildAvatarSection() {
+    final user = _user!;
+    final hasPhoto = user.profilePhotoUrl != null &&
+        user.profilePhotoUrl!.isNotEmpty;
+    return Column(
+      children: [
+        Stack(
+          alignment: Alignment.bottomRight,
+          children: [
+            Container(
+              width: 132,
+              height: 132,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.accent, AppColors.gold],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.accent.withAlpha(80),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(4),
+              child: Container(
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.surface,
+                ),
+                child: ClipOval(
+                  child: hasPhoto
+                      ? Image.network(
+                          user.profilePhotoUrl!,
+                          fit: BoxFit.cover,
+                          width: 124,
+                          height: 124,
+                          errorBuilder: (_, __, ___) =>
+                              _avatarInitials(user, 44),
+                        )
+                      : _avatarInitials(user, 44),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 4,
+              right: 4,
+              child: Material(
+                color: AppColors.accent,
+                shape: const CircleBorder(),
+                elevation: 4,
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: _openChangePhotoSheet,
+                  child: const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Icon(Icons.camera_alt_outlined,
+                        color: AppColors.primary, size: 18),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Text(
+          user.fullName,
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          user.email,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+          ),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: _openChangePhotoSheet,
+          icon: const Icon(Icons.edit_outlined, size: 16),
+          label: const Text('Change picture'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.accent,
+            side: const BorderSide(color: AppColors.accent),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _avatarInitials(UserModel user, double fontSize) {
+    return Center(
+      child: Text(
+        user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : 'I',
+        style: TextStyle(
+          color: AppColors.accent,
+          fontSize: fontSize,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  // ─── Work-ID card ──────────────────────────────────────────────
 
   Widget _buildCard() {
     final user = _user!;
     final intern = _intern!;
     return Container(
-      width: 340,
+      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: AppColors.idCardGradient,
@@ -138,10 +442,7 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
             ],
           ),
           const SizedBox(height: 18),
-          Container(
-            height: 1,
-            color: AppColors.accent.withAlpha(60),
-          ),
+          Container(height: 1, color: AppColors.accent.withAlpha(60)),
           const SizedBox(height: 18),
           Row(
             children: [
@@ -153,15 +454,17 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
                   color: AppColors.surface,
                   border: Border.all(color: AppColors.accent, width: 2),
                 ),
-                child: user.profilePhotoUrl != null
-                    ? ClipOval(
-                        child: Image.network(
+                child: ClipOval(
+                  child: user.profilePhotoUrl != null &&
+                          user.profilePhotoUrl!.isNotEmpty
+                      ? Image.network(
                           user.profilePhotoUrl!,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _fallbackAvatar(user),
-                        ),
-                      )
-                    : _fallbackAvatar(user),
+                          errorBuilder: (_, __, ___) =>
+                              _avatarInitials(user, 30),
+                        )
+                      : _avatarInitials(user, 30),
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -235,12 +538,9 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
             ),
           ),
           const SizedBox(height: 18),
-          // Identification block + QR code side by side. The QR encodes
-          // a JSON payload with the intern id and student id, which the
-          // mentor scanner can decode to mark attendance instantly.
           Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 14, vertical: 12),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: AppColors.textPrimary,
               borderRadius: BorderRadius.circular(10),
@@ -328,19 +628,6 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
     );
   }
 
-  Widget _fallbackAvatar(UserModel user) {
-    return Center(
-      child: Text(
-        user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : 'S',
-        style: const TextStyle(
-          color: AppColors.accent,
-          fontSize: 32,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-
   Widget _cardRow(String label, String value) {
     return Row(
       children: [
@@ -412,7 +699,7 @@ class _MissingData extends StatelessWidget {
           Icon(Icons.badge_outlined,
               size: 56, color: AppColors.textSecondary),
           SizedBox(height: 12),
-          Text('Cannot load the card',
+          Text('Cannot load profile',
               style: TextStyle(color: AppColors.textSecondary)),
         ],
       ),

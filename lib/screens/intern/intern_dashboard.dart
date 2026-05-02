@@ -29,6 +29,10 @@ class _InternDashboardState extends State<InternDashboard> {
   List<AttendanceModel> _attendance = [];
   bool _loading = true;
 
+  /// One-shot guard so the "set your profile picture" prompt is shown
+  /// at most once per app session for users who haven't uploaded one yet.
+  static bool _profilePromptShown = false;
+
   @override
   void initState() {
     super.initState();
@@ -60,10 +64,52 @@ class _InternDashboardState extends State<InternDashboard> {
           _attendance = att;
           _loading = false;
         });
+        _maybePromptProfilePhoto();
       }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// Shown once per session right after the intern logs in for the
+  /// first time and hasn't picked a profile picture yet.
+  void _maybePromptProfilePhoto() {
+    if (_profilePromptShown) return;
+    final user = _currentUser;
+    if (user == null) return;
+    final hasPhoto =
+        user.profilePhotoUrl != null && user.profilePhotoUrl!.isNotEmpty;
+    if (hasPhoto) return;
+    _profilePromptShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: const Text('Welcome to Pro-Link'),
+          content: const Text(
+            'Would you like to set your profile picture now? '
+            'You can do it later from your profile page anytime.',
+            style: TextStyle(color: AppColors.textPrimary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Maybe later'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.of(context).pushNamed('/intern/id-card');
+              },
+              icon: const Icon(Icons.account_circle_outlined, size: 18),
+              label: const Text('Set picture'),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   double get _avgScore {
@@ -89,9 +135,12 @@ class _InternDashboardState extends State<InternDashboard> {
       appBar: AppBar(
         title: const Text('Pro-Link Intern'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_outlined),
-            onPressed: _load,
+          // Circular avatar shortcut to the profile screen. Replaces the
+          // old refresh button — pull-to-refresh on the body covers the
+          // refresh use-case.
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: _ProfileAvatarButton(user: _currentUser),
           ),
         ],
       ),
@@ -358,6 +407,60 @@ class _InternDashboardState extends State<InternDashboard> {
                   color: AppColors.textSecondary, size: 14),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Circular avatar in the AppBar that opens the intern profile screen.
+/// Falls back to an initial when no profile photo is available.
+class _ProfileAvatarButton extends StatelessWidget {
+  final UserModel? user;
+  const _ProfileAvatarButton({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhoto =
+        user?.profilePhotoUrl != null && user!.profilePhotoUrl!.isNotEmpty;
+    return InkWell(
+      customBorder: const CircleBorder(),
+      onTap: () => Navigator.of(context).pushNamed('/intern/id-card'),
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.surface,
+            border: Border.all(color: AppColors.accent, width: 1.5),
+          ),
+          child: ClipOval(
+            child: hasPhoto
+                ? Image.network(
+                    user!.profilePhotoUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _initials(user),
+                  )
+                : _initials(user),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _initials(UserModel? u) {
+    final letter = (u?.fullName.isNotEmpty ?? false)
+        ? u!.fullName[0].toUpperCase()
+        : 'I';
+    return Center(
+      child: Text(
+        letter,
+        style: const TextStyle(
+          color: AppColors.accent,
+          fontWeight: FontWeight.w700,
+          fontSize: 14,
         ),
       ),
     );
