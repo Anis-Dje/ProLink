@@ -58,9 +58,13 @@ class _MentorDashboardState extends State<MentorDashboard> {
       appBar: AppBar(
         title: const Text('Pro-Link Mentor'),
         actions: [
+          // Quick shortcut to the QR attendance scanner. Pull-to-refresh
+          // on the body keeps the refresh use-case covered.
           IconButton(
-            icon: const Icon(Icons.refresh_outlined),
-            onPressed: _loadData,
+            tooltip: 'Scan attendance QR',
+            icon: const Icon(Icons.qr_code_scanner_outlined),
+            onPressed: () => Navigator.of(context)
+                .pushNamed('/mentor/scan-attendance'),
           ),
         ],
       ),

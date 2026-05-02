@@ -122,7 +122,79 @@ class _UploadTrainingScreenState extends State<UploadTrainingScreen> {
     );
   }
 
+  /// Entry-point for the FloatingActionButton: lets the mentor choose
+  /// between uploading a local file (with thumbnail preview) or attaching
+  /// an external URL (e.g. a Google Drive / YouTube link). The two flows
+  /// share `_promptInfo()` for title/description/tags and end with the
+  /// same `createTrainingFile` call.
   Future<void> _upload() async {
+    final source = await showModalBottomSheet<_UploadSource>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.cardBorder,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 14, 20, 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Add a training material',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    )),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.upload_file_outlined,
+                  color: AppColors.accent),
+              title: const Text('Upload from device',
+                  style: TextStyle(color: AppColors.textPrimary)),
+              subtitle: const Text(
+                  'Pick a PDF, document, image or video from your device',
+                  style: TextStyle(
+                      color: AppColors.textSecondary, fontSize: 12)),
+              onTap: () => Navigator.pop(ctx, _UploadSource.file),
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.link, color: AppColors.accent),
+              title: const Text('Attach a URL',
+                  style: TextStyle(color: AppColors.textPrimary)),
+              subtitle: const Text(
+                  'Paste a public link (drive, YouTube, blog post...)',
+                  style: TextStyle(
+                      color: AppColors.textSecondary, fontSize: 12)),
+              onTap: () => Navigator.pop(ctx, _UploadSource.url),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+    if (source == _UploadSource.url) {
+      await _uploadFromUrl();
+    } else {
+      await _uploadFromFile();
+    }
+  }
+
+  Future<void> _uploadFromFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: [
@@ -178,6 +250,76 @@ class _UploadTrainingScreenState extends State<UploadTrainingScreen> {
           .notifyTrainingAdded(title: info.title);
       if (mounted) {
         AppUtils.showSnackBar(context, 'Material uploaded');
+      }
+      _load();
+    } catch (e) {
+      if (mounted) {
+        AppUtils.showSnackBar(context, 'Error: $e', isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  /// URL-only flow. The file URL is whatever the mentor pastes; the
+  /// extension drives the icon used in the list. Title/description/tags
+  /// come from the same `_promptInfo` dialog as the file flow.
+  Future<void> _uploadFromUrl() async {
+    final urlCtrl = TextEditingController();
+    final url = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Document URL'),
+        content: TextField(
+          controller: urlCtrl,
+          autofocus: true,
+          style: const TextStyle(color: AppColors.textPrimary),
+          decoration: const InputDecoration(
+            hintText: 'https://...',
+            prefixIcon: Icon(Icons.link),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, urlCtrl.text.trim()),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+    if (url == null || url.isEmpty) return;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      AppUtils.showSnackBar(context, 'URL must start with http(s)://',
+          isError: true);
+      return;
+    }
+    final info = await _promptInfo();
+    if (info == null) return;
+    setState(() => _uploading = true);
+    try {
+      final mentorId =
+          context.read<AuthService>().currentUser?.id ?? 'unknown';
+      final ext = p.extension(url).replaceFirst('.', '').toLowerCase();
+      final training = TrainingFileModel(
+        id: '',
+        title: info.title,
+        description: info.description,
+        fileUrl: url,
+        fileType: ext.isEmpty ? 'link' : ext,
+        uploadedBy: mentorId,
+        uploadDate: DateTime.now(),
+        tags: info.tags,
+      );
+      await context.read<FirestoreService>().createTrainingFile(training);
+      await NotificationService.instance
+          .notifyTrainingAdded(title: info.title);
+      if (mounted) {
+        AppUtils.showSnackBar(context, 'Material added');
       }
       _load();
     } catch (e) {
@@ -365,6 +507,9 @@ class _FileInfo {
   _FileInfo(
       {required this.title, required this.description, required this.tags});
 }
+
+/// Distinguishes the two ways a mentor can attach a training material.
+enum _UploadSource { file, url }
 
 class _FileTile extends StatelessWidget {
   final TrainingFileModel file;

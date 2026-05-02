@@ -97,8 +97,8 @@ class AppDrawer extends StatelessWidget {
             route: '/intern/dashboard',
           ),
           _NavItem(
-            icon: Icons.badge_outlined,
-            label: 'Intern ID Card',
+            icon: Icons.account_circle_outlined,
+            label: 'My Profile',
             route: '/intern/id-card',
           ),
           _NavItem(
