@@ -11,73 +11,65 @@
 -- and IDs stay stable across runs.
 --
 -- Run this in Neon's SQL editor (or via psql) AFTER the schema migrations
--- (server/migrations/001_initial.sql) have been applied.
+-- (server/migrations/001_initial.sql) have been applied. The script uses
+-- only standard SQL — no psql-specific meta-commands — so it works in
+-- any client.
 
 BEGIN;
 
 -- ──────────────────────────────────────────────────────────────────
--- 1. Shared bcrypt hash for password "123456"
--- ──────────────────────────────────────────────────────────────────
--- Generated with: php -r 'echo password_hash("123456", PASSWORD_BCRYPT);'
--- (any bcrypt hash of "123456" works; the salt is embedded in the hash)
-\set demo_pwd '$2y$10$QuyQRMAfK2BUFmoW2iFPnOocLbSy2bFqgzG/OUiYgvRVKJ2kxs8Aq'
-
--- ──────────────────────────────────────────────────────────────────
--- 2. Mentors (3 accounts)
+-- 1. Mentors (3 accounts). All passwords are "123456" hashed with
+--    PHP's password_hash(..., PASSWORD_BCRYPT).
 -- ──────────────────────────────────────────────────────────────────
 INSERT INTO users (email, password_hash, full_name, phone, role, is_active)
 VALUES
-    ('mentor1@gmail.com', :'demo_pwd', 'Karim Bensalah', '+213 555 110 001', 'mentor', TRUE),
-    ('mentor2@gmail.com', :'demo_pwd', 'Sara Hadj-Ali',  '+213 555 110 002', 'mentor', TRUE),
-    ('mentor3@gmail.com', :'demo_pwd', 'Yacine Meddah',  '+213 555 110 003', 'mentor', TRUE)
+    ('mentor1@gmail.com', '$2y$10$QuyQRMAfK2BUFmoW2iFPnOocLbSy2bFqgzG/OUiYgvRVKJ2kxs8Aq', 'Karim Bensalah', '+213 555 110 001', 'mentor', TRUE),
+    ('mentor2@gmail.com', '$2y$10$QuyQRMAfK2BUFmoW2iFPnOocLbSy2bFqgzG/OUiYgvRVKJ2kxs8Aq', 'Sara Hadj-Ali',  '+213 555 110 002', 'mentor', TRUE),
+    ('mentor3@gmail.com', '$2y$10$QuyQRMAfK2BUFmoW2iFPnOocLbSy2bFqgzG/OUiYgvRVKJ2kxs8Aq', 'Yacine Meddah',  '+213 555 110 003', 'mentor', TRUE)
 ON CONFLICT (email) DO UPDATE
     SET full_name = EXCLUDED.full_name,
         role      = EXCLUDED.role,
         is_active = EXCLUDED.is_active;
 
 -- ──────────────────────────────────────────────────────────────────
--- 3. Intern user accounts (10 accounts across different fields)
+-- 2. Intern user accounts (10 accounts across different fields).
 -- ──────────────────────────────────────────────────────────────────
 INSERT INTO users (email, password_hash, full_name, phone, role, is_active)
 VALUES
-    ('intern1@gmail.com',  :'demo_pwd', 'Amine Boudjelal',   '+213 555 220 001', 'intern', TRUE),
-    ('intern2@gmail.com',  :'demo_pwd', 'Lina Cherif',       '+213 555 220 002', 'intern', TRUE),
-    ('intern3@gmail.com',  :'demo_pwd', 'Rayan Belkacem',    '+213 555 220 003', 'intern', TRUE),
-    ('intern4@gmail.com',  :'demo_pwd', 'Nour El Houda Saidi','+213 555 220 004', 'intern', TRUE),
-    ('intern5@gmail.com',  :'demo_pwd', 'Mehdi Tahar',       '+213 555 220 005', 'intern', TRUE),
-    ('intern6@gmail.com',  :'demo_pwd', 'Ines Mahmoudi',     '+213 555 220 006', 'intern', TRUE),
-    ('intern7@gmail.com',  :'demo_pwd', 'Walid Hamidi',      '+213 555 220 007', 'intern', TRUE),
-    ('intern8@gmail.com',  :'demo_pwd', 'Sarra Lounis',      '+213 555 220 008', 'intern', TRUE),
-    ('intern9@gmail.com',  :'demo_pwd', 'Adel Brahimi',      '+213 555 220 009', 'intern', TRUE),
-    ('intern10@gmail.com', :'demo_pwd', 'Yasmine Khellaf',   '+213 555 220 010', 'intern', TRUE)
+    ('intern1@gmail.com',  '$2y$10$QuyQRMAfK2BUFmoW2iFPnOocLbSy2bFqgzG/OUiYgvRVKJ2kxs8Aq', 'Amine Boudjelal',     '+213 555 220 001', 'intern', TRUE),
+    ('intern2@gmail.com',  '$2y$10$QuyQRMAfK2BUFmoW2iFPnOocLbSy2bFqgzG/OUiYgvRVKJ2kxs8Aq', 'Lina Cherif',         '+213 555 220 002', 'intern', TRUE),
+    ('intern3@gmail.com',  '$2y$10$QuyQRMAfK2BUFmoW2iFPnOocLbSy2bFqgzG/OUiYgvRVKJ2kxs8Aq', 'Rayan Belkacem',      '+213 555 220 003', 'intern', TRUE),
+    ('intern4@gmail.com',  '$2y$10$QuyQRMAfK2BUFmoW2iFPnOocLbSy2bFqgzG/OUiYgvRVKJ2kxs8Aq', 'Nour El Houda Saidi', '+213 555 220 004', 'intern', TRUE),
+    ('intern5@gmail.com',  '$2y$10$QuyQRMAfK2BUFmoW2iFPnOocLbSy2bFqgzG/OUiYgvRVKJ2kxs8Aq', 'Mehdi Tahar',         '+213 555 220 005', 'intern', TRUE),
+    ('intern6@gmail.com',  '$2y$10$QuyQRMAfK2BUFmoW2iFPnOocLbSy2bFqgzG/OUiYgvRVKJ2kxs8Aq', 'Ines Mahmoudi',       '+213 555 220 006', 'intern', TRUE),
+    ('intern7@gmail.com',  '$2y$10$QuyQRMAfK2BUFmoW2iFPnOocLbSy2bFqgzG/OUiYgvRVKJ2kxs8Aq', 'Walid Hamidi',        '+213 555 220 007', 'intern', TRUE),
+    ('intern8@gmail.com',  '$2y$10$QuyQRMAfK2BUFmoW2iFPnOocLbSy2bFqgzG/OUiYgvRVKJ2kxs8Aq', 'Sarra Lounis',        '+213 555 220 008', 'intern', TRUE),
+    ('intern9@gmail.com',  '$2y$10$QuyQRMAfK2BUFmoW2iFPnOocLbSy2bFqgzG/OUiYgvRVKJ2kxs8Aq', 'Adel Brahimi',        '+213 555 220 009', 'intern', TRUE),
+    ('intern10@gmail.com', '$2y$10$QuyQRMAfK2BUFmoW2iFPnOocLbSy2bFqgzG/OUiYgvRVKJ2kxs8Aq', 'Yasmine Khellaf',     '+213 555 220 010', 'intern', TRUE)
 ON CONFLICT (email) DO UPDATE
     SET full_name = EXCLUDED.full_name,
         role      = EXCLUDED.role,
         is_active = EXCLUDED.is_active;
 
 -- ──────────────────────────────────────────────────────────────────
--- 4. Intern profile rows (linked to user, assigned to a mentor, given
+-- 3. Intern profile rows (linked to user, assigned to a mentor, given
 --    a specialization / department / start date / status). Mentor
 --    distribution: mentor1 ← interns 1-4, mentor2 ← interns 5-7,
 --    mentor3 ← interns 8-10.
 -- ──────────────────────────────────────────────────────────────────
-WITH
-    m1 AS (SELECT id FROM users WHERE email = 'mentor1@gmail.com'),
-    m2 AS (SELECT id FROM users WHERE email = 'mentor2@gmail.com'),
-    m3 AS (SELECT id FROM users WHERE email = 'mentor3@gmail.com'),
-    intern_data (email, student_id, university, specialization, department, mentor_email) AS (
-        VALUES
-            ('intern1@gmail.com',  'STU-2026-001', 'University of Algiers',     'Software Engineering',   'Computer Science',     'mentor1@gmail.com'),
-            ('intern2@gmail.com',  'STU-2026-002', 'University of Algiers',     'Cybersecurity',          'Computer Science',     'mentor1@gmail.com'),
-            ('intern3@gmail.com',  'STU-2026-003', 'USTHB',                     'Data Science',           'Computer Science',     'mentor1@gmail.com'),
-            ('intern4@gmail.com',  'STU-2026-004', 'USTHB',                     'Network Engineering',    'Networks & Telecoms',  'mentor1@gmail.com'),
-            ('intern5@gmail.com',  'STU-2026-005', 'University of Constantine', 'Mobile Development',     'Software Engineering', 'mentor2@gmail.com'),
-            ('intern6@gmail.com',  'STU-2026-006', 'University of Oran',        'Web Development',        'Software Engineering', 'mentor2@gmail.com'),
-            ('intern7@gmail.com',  'STU-2026-007', 'University of Oran',        'Cloud Computing',        'Cloud & DevOps',       'mentor2@gmail.com'),
-            ('intern8@gmail.com',  'STU-2026-008', 'University of Tlemcen',     'AI / Machine Learning',  'Data & AI',            'mentor3@gmail.com'),
-            ('intern9@gmail.com',  'STU-2026-009', 'University of Bejaia',      'DevOps Engineering',     'Cloud & DevOps',       'mentor3@gmail.com'),
-            ('intern10@gmail.com', 'STU-2026-010', 'University of Annaba',      'UI/UX Design',           'Design',               'mentor3@gmail.com')
-    )
+WITH intern_data (email, student_id, university, specialization, department, mentor_email) AS (
+    VALUES
+        ('intern1@gmail.com',  'STU-2026-001', 'University of Algiers',     'Software Engineering',   'Computer Science',     'mentor1@gmail.com'),
+        ('intern2@gmail.com',  'STU-2026-002', 'University of Algiers',     'Cybersecurity',          'Computer Science',     'mentor1@gmail.com'),
+        ('intern3@gmail.com',  'STU-2026-003', 'USTHB',                     'Data Science',           'Computer Science',     'mentor1@gmail.com'),
+        ('intern4@gmail.com',  'STU-2026-004', 'USTHB',                     'Network Engineering',    'Networks & Telecoms',  'mentor1@gmail.com'),
+        ('intern5@gmail.com',  'STU-2026-005', 'University of Constantine', 'Mobile Development',     'Software Engineering', 'mentor2@gmail.com'),
+        ('intern6@gmail.com',  'STU-2026-006', 'University of Oran',        'Web Development',        'Software Engineering', 'mentor2@gmail.com'),
+        ('intern7@gmail.com',  'STU-2026-007', 'University of Oran',        'Cloud Computing',        'Cloud & DevOps',       'mentor2@gmail.com'),
+        ('intern8@gmail.com',  'STU-2026-008', 'University of Tlemcen',     'AI / Machine Learning',  'Data & AI',            'mentor3@gmail.com'),
+        ('intern9@gmail.com',  'STU-2026-009', 'University of Bejaia',      'DevOps Engineering',     'Cloud & DevOps',       'mentor3@gmail.com'),
+        ('intern10@gmail.com', 'STU-2026-010', 'University of Annaba',      'UI/UX Design',           'Design',               'mentor3@gmail.com')
+)
 INSERT INTO interns (
     user_id, student_id, university, specialization, department,
     mentor_id, status, start_date, end_date
@@ -106,7 +98,7 @@ ON CONFLICT (user_id) DO UPDATE
         end_date       = EXCLUDED.end_date;
 
 -- ──────────────────────────────────────────────────────────────────
--- 5. Past-week attendance per intern. Each intern gets 7 rows for the
+-- 4. Past-week attendance per intern. Each intern gets 7 rows for the
 --    last 7 calendar days, with a varied status mix so the weekly
 --    matrix and analytics screens have something realistic to show.
 -- ──────────────────────────────────────────────────────────────────
