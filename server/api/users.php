@@ -4,6 +4,7 @@
 
 require_once __DIR__ . '/../lib/helpers.php';
 require_once __DIR__ . '/../lib/db.php';
+require_once __DIR__ . '/../lib/notifications.php';
 pro_link_bootstrap();
 
 $pdo = pro_link_pdo();
@@ -13,7 +14,7 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if ($method === 'GET') {
     $role = $_GET['role'] ?? '';
     $sql = 'SELECT id, email, full_name, phone, role, is_active,
-                   profile_photo_url, created_at
+                   must_change_password, profile_photo_url, created_at
               FROM users';
     $params = [];
     if ($role !== '') {
@@ -51,11 +52,13 @@ if ($method === 'POST') {
     if ($exists->fetch()) {
         pro_link_fail(409, 'email_in_use', 'Email already registered.');
     }
+    // Admin-created accounts always get a temporary password — flag the
+    // user so the Flutter client forces a password change on first login.
     $ins = $pdo->prepare('INSERT INTO users
-        (email, password_hash, full_name, phone, role)
-        VALUES (:e, :h, :n, :p, :r)
+        (email, password_hash, full_name, phone, role, must_change_password)
+        VALUES (:e, :h, :n, :p, :r, TRUE)
         RETURNING id, email, full_name, phone, role, is_active,
-                  profile_photo_url, created_at');
+                  must_change_password, profile_photo_url, created_at');
     $ins->execute([
         ':e' => $email,
         ':h' => password_hash($password, PASSWORD_BCRYPT),
@@ -63,7 +66,8 @@ if ($method === 'POST') {
         ':p' => $phone,
         ':r' => $role,
     ]);
-    pro_link_ok(['user' => pro_link_user_to_json($ins->fetch())], 201);
+    $newUser = $ins->fetch();
+    pro_link_ok(['user' => pro_link_user_to_json($newUser)], 201);
 }
 
 pro_link_fail(405, 'method_not_allowed', 'Use GET or POST.');

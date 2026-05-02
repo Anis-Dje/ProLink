@@ -12,6 +12,7 @@ import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/common/app_drawer.dart';
 import '../../widgets/cards/stats_card.dart';
+import '../../widgets/notifications_bell.dart';
 
 /// Intern home dashboard with quick access to the ID card, schedule,
 /// training files and evaluations.
@@ -135,11 +136,12 @@ class _InternDashboardState extends State<InternDashboard> {
       appBar: AppBar(
         title: const Text('Pro-Link Intern'),
         actions: [
-          // Circular avatar shortcut to the profile screen. Replaces the
-          // old refresh button — pull-to-refresh on the body covers the
-          // refresh use-case.
+          // Bell goes immediately to the left of the avatar so the unread
+          // badge stays glanceable while the avatar shortcut to the
+          // profile screen is preserved.
+          const NotificationsBell(),
           Padding(
-            padding: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.only(left: 4, right: 12),
             child: _ProfileAvatarButton(user: _currentUser),
           ),
         ],

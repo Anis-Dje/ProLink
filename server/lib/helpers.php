@@ -80,7 +80,7 @@ function pro_link_current_user(PDO $pdo): array {
         pro_link_fail(401, 'missing_token', 'Authorization Bearer token required.');
     }
     $stmt = $pdo->prepare('SELECT id, email, full_name, phone, role, is_active,
-                                  profile_photo_url, created_at
+                                  must_change_password, profile_photo_url, created_at
                              FROM users WHERE session_token = :t');
     $stmt->execute([':t' => $token]);
     $row = $stmt->fetch();
@@ -109,6 +109,9 @@ function pro_link_user_to_json(array $row): array {
         'phone' => $row['phone'] ?? '',
         'role' => $row['role'],
         'isActive' => (bool)$row['is_active'],
+        'mustChangePassword' => array_key_exists('must_change_password', $row)
+            ? (bool)$row['must_change_password']
+            : false,
         'profilePhotoUrl' => $row['profile_photo_url'] ?? null,
         'createdAt' => pro_link_iso($row['created_at'] ?? null),
     ];

@@ -4,6 +4,7 @@
 
 require_once __DIR__ . '/../lib/helpers.php';
 require_once __DIR__ . '/../lib/db.php';
+require_once __DIR__ . '/../lib/notifications.php';
 pro_link_bootstrap();
 pro_link_require_method('POST');
 
@@ -37,4 +38,14 @@ $join = $pdo->prepare('SELECT full_name, email, profile_photo_url
                          FROM users WHERE id = :u');
 $join->execute([':u' => $row['user_id']]);
 $row += $join->fetch();
+
+// Notify the newly approved intern so they know they can now log in.
+pro_link_notify(
+    $pdo,
+    (string)$row['user_id'],
+    'Account approved',
+    'Your Pro-Link account has been approved. You can now log in.',
+    'approval'
+);
+
 pro_link_ok(['intern' => pro_link_intern_to_json($row)]);

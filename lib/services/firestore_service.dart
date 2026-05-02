@@ -3,6 +3,7 @@ import '../models/attendance_model.dart';
 import '../models/department_model.dart';
 import '../models/evaluation_model.dart';
 import '../models/intern_model.dart';
+import '../models/notification_model.dart';
 import '../models/schedule_model.dart';
 import '../models/training_file_model.dart';
 import '../models/user_model.dart';
@@ -318,6 +319,27 @@ class FirestoreService {
         .map((e) =>
             TrainingFileModel.fromJson((e as Map).cast<String, dynamic>()))
         .toList();
+  }
+
+  // ─── Notifications ────────────────────────────────────────────
+
+  /// Fetch the current user's notifications, newest first.
+  Future<List<NotificationModel>> getNotifications() async {
+    final res = await _api.get('/notifications/');
+    return (res['notifications'] as List)
+        .map((e) =>
+            NotificationModel.fromJson((e as Map).cast<String, dynamic>()))
+        .toList();
+  }
+
+  /// Mark a single notification as read (or unread when [isRead] is false).
+  Future<void> markNotificationRead(String id, {bool isRead = true}) async {
+    await _api.patch('/notifications/$id', body: {'isRead': isRead});
+  }
+
+  /// Mark all unread notifications of the current user as read.
+  Future<void> markAllNotificationsRead() async {
+    await _api.post('/notifications/read-all');
   }
 
   // ─── Helpers ──────────────────────────────────────────────────

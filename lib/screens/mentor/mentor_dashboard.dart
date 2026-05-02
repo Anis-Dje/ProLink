@@ -9,6 +9,7 @@ import '../../services/firestore_service.dart';
 import '../../widgets/common/app_drawer.dart';
 import '../../widgets/cards/stats_card.dart';
 import '../../widgets/cards/intern_card.dart';
+import '../../widgets/notifications_bell.dart';
 
 /// Entry point for mentor users. Shows a quick summary of assigned interns
 /// and shortcuts to the main mentor workflows (evaluate, attendance, upload).
@@ -57,18 +58,21 @@ class _MentorDashboardState extends State<MentorDashboard> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Pro-Link Mentor'),
-        actions: [
-          // Quick shortcut to the QR attendance scanner. Pull-to-refresh
-          // on the body keeps the refresh use-case covered.
-          IconButton(
-            tooltip: 'Scan attendance QR',
-            icon: const Icon(Icons.qr_code_scanner_outlined),
-            onPressed: () => Navigator.of(context)
-                .pushNamed('/mentor/scan-attendance'),
-          ),
+        actions: const [
+          NotificationsBell(),
+          SizedBox(width: 4),
         ],
       ),
       drawer: _currentUser != null ? AppDrawer(user: _currentUser!) : null,
+      // QR scan moved off the AppBar onto a circular FAB at the bottom
+      // right per the dashboard reorganization.
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.accent,
+        tooltip: 'Scan attendance QR',
+        onPressed: () => Navigator.of(context)
+            .pushNamed('/mentor/scan-attendance'),
+        child: const Icon(Icons.qr_code_scanner, color: Colors.white),
+      ),
       body: _loading
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.accent))

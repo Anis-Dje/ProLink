@@ -37,6 +37,12 @@ class AuthService extends ChangeNotifier {
     return user;
   }
 
+  /// Self-service intern registration. The backend creates a `pending`
+  /// intern row and does NOT issue a session token — the intern has to
+  /// wait for an admin approval before they can log in. The returned
+  /// [UserModel] is the freshly created (still-pending) user; the caller
+  /// should treat the response as informational and route the user back
+  /// to the login screen.
   Future<UserModel> registerIntern({
     required String email,
     required String password,
@@ -59,12 +65,7 @@ class AuthService extends ChangeNotifier {
       'department': department,
       if (profilePhotoUrl != null) 'profilePhotoUrl': profilePhotoUrl,
     });
-    _api.setToken(res['token'] as String);
-    final user =
-        UserModel.fromJson((res['user'] as Map).cast<String, dynamic>());
-    _currentUser = user;
-    notifyListeners();
-    return user;
+    return UserModel.fromJson((res['user'] as Map).cast<String, dynamic>());
   }
 
   /// Admin-only: provision a mentor or admin user. Does not sign the caller in
@@ -90,6 +91,25 @@ class AuthService extends ChangeNotifier {
     _api.setToken(null);
     _currentUser = null;
     notifyListeners();
+  }
+
+  /// Change the current user's password. Verifies [currentPassword],
+  /// updates the hash on the server, rotates the session token (server
+  /// returns a fresh one) and clears the must_change_password flag.
+  Future<UserModel> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final res = await _api.post('/auth/change-password', body: {
+      'currentPassword': currentPassword,
+      'newPassword': newPassword,
+    });
+    _api.setToken(res['token'] as String);
+    final user =
+        UserModel.fromJson((res['user'] as Map).cast<String, dynamic>());
+    _currentUser = user;
+    notifyListeners();
+    return user;
   }
 
   /// Compatibility shim for the legacy Firestore-era code: returns the

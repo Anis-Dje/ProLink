@@ -9,7 +9,6 @@ import '../../core/constants/app_constants.dart';
 import '../../core/utils/app_utils.dart';
 import '../../services/auth_service.dart';
 import '../../services/api_client.dart';
-import '../../services/storage_service.dart';
 import '../../widgets/common/loading_overlay.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -72,10 +71,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {
-      // The /upload endpoint requires a JWT, so we must register first to
-      // obtain one. Upload the photo and patch the user record afterwards.
+      // Newly registered interns are created in `pending` status and are
+      // NOT issued a session token — the admin must approve the account
+      // before the intern can log in. Routes back to the login screen
+      // with a confirmation message.
       final authService = context.read<AuthService>();
-      final user = await authService.registerIntern(
+      await authService.registerIntern(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         fullName: _fullNameController.text.trim(),
@@ -86,32 +87,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
         department: _selectedDepartment,
       );
 
-      if (_profilePhoto != null) {
-        try {
-          final storageService = context.read<StorageService>();
-          final photoUrl =
-              await storageService.uploadProfilePhoto(user.id, _profilePhoto!);
-          await authService.updateProfile(
-            userId: user.id,
-            profilePhotoUrl: photoUrl,
-          );
-        } catch (_) {
-          // The account is already created; surface the photo failure but
-          // don't block the user on the signup screen.
-          if (mounted) {
-            AppUtils.showSnackBar(
-              context,
-              'Account created, but the photo could not be uploaded.',
-              isError: true,
-            );
-          }
-        }
-      }
-
       if (!mounted) return;
-      // After successful intern signup the JWT is issued, but the account is
-      // pending admin approval; route to the holding screen until approved.
-      Navigator.of(context).pushNamedAndRemoveUntil('/pending', (route) => false);
+      // The photo cannot be uploaded yet (no auth token until approval).
+      // Once the admin approves the intern they'll be able to set their
+      // photo from the profile screen on first login.
+      if (_profilePhoto != null) {
+        AppUtils.showSnackBar(
+          context,
+          'Account created. You can set a profile photo from your '
+              'profile after the admin approves your account.',
+        );
+      }
+      Navigator.of(context)
+          .pushNamedAndRemoveUntil('/login', (route) => false, arguments: {
+        'pendingMessage':
+            'Your account was created and is awaiting admin approval. '
+                'You will be able to log in as soon as the administrator approves it.',
+      });
     } catch (e) {
       if (mounted) {
         String msg = 'Registration error. Please try again.';

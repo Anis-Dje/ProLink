@@ -5,6 +5,8 @@ import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_utils.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
+import '../../services/api_client.dart';
+import '../../widgets/auth/change_password_dialog.dart';
 import '../../widgets/common/loading_overlay.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -20,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _consumedRouteArguments = false;
 
   @override
   void dispose() {
@@ -28,20 +31,54 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // If we were redirected here from a registration / pending intern
+    // login, surface the message that came along with the route as a
+    // snackbar on first frame.
+    if (_consumedRouteArguments) return;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map && args['pendingMessage'] is String) {
+      _consumedRouteArguments = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        AppUtils.showSnackBar(context, args['pendingMessage'] as String);
+      });
+    }
+  }
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {
       final authService = context.read<AuthService>();
-      final user = await authService.login(
+      var user = await authService.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
       if (!mounted) return;
+
+      // Force a password change on first login for admin-provisioned
+      // accounts. The dialog will sign the user out if they cancel.
+      if (user.mustChangePassword) {
+        final updated = await ChangePasswordDialog.show(
+          context,
+          temporaryPassword: _passwordController.text,
+        );
+        if (!mounted) return;
+        if (updated == null) {
+          // User cancelled — they have been signed out by the dialog.
+          return;
+        }
+        user = updated;
+        AppUtils.showSnackBar(context, 'Password updated. Welcome!');
+      }
+
       _navigateByRole(user);
     } catch (e) {
       if (mounted) {
-        AppUtils.showSnackBar(context, _getErrorMessage(e.toString()), isError: true);
+        AppUtils.showSnackBar(context, _getErrorMessage(e), isError: true);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -62,14 +99,32 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  String _getErrorMessage(String error) {
+  String _getErrorMessage(Object e) {
+    // Prefer the structured error returned by the API so users see the
+    // correct, server-defined message (e.g. "account pending approval").
+    if (e is ApiException) {
+      switch (e.error) {
+        case 'invalid_credentials':
+          return 'Incorrect email or password';
+        case 'account_disabled':
+          return 'This account has been disabled';
+        case 'account_pending':
+        case 'account_rejected':
+          return e.messageOrError;
+        case 'server_misconfigured':
+          return 'The backend server is not configured (DATABASE_URL missing).';
+      }
+      return e.messageOrError;
+    }
+    final error = e.toString();
     if (error.contains('invalid_credentials')) {
       return 'Incorrect email or password';
     } else if (error.contains('account_disabled')) {
       return 'This account has been disabled';
-    } else if (error.contains('server_misconfigured') ||
-        error.contains('DATABASE_URL environment variable is not set')) {
-      return 'The backend server is not configured (DATABASE_URL missing).';
+    } else if (error.contains('account_pending')) {
+      return 'Your account is awaiting admin approval.';
+    } else if (error.contains('account_rejected')) {
+      return 'Your registration was rejected by the administrator.';
     } else if (error.contains('SocketException') ||
         error.contains('Failed host lookup') ||
         error.contains('Connection refused')) {
