@@ -39,7 +39,13 @@ if (($method === 'PATCH' || $method === 'POST') && $id !== '') {
                               SET is_read = :r
                             WHERE id = :id AND user_id = :u
                             RETURNING *');
-    $stmt->execute([':r' => $isRead, ':id' => $id, ':u' => $me['id']]);
+    // PDOStatement::execute(array) binds every value as PARAM_STR, which
+    // turns PHP `false` into '' and Postgres rejects '' for BOOLEAN
+    // columns. Bind the boolean explicitly via PARAM_BOOL.
+    $stmt->bindValue(':r', $isRead, PDO::PARAM_BOOL);
+    $stmt->bindValue(':id', $id);
+    $stmt->bindValue(':u', $me['id']);
+    $stmt->execute();
     $r = $stmt->fetch();
     if (!$r) pro_link_fail(404, 'not_found', 'Notification not found.');
     $r['userId'] = $r['user_id'];
