@@ -10,6 +10,7 @@ import '../../services/firestore_service.dart';
 import '../../widgets/common/app_drawer.dart';
 import '../../widgets/cards/stats_card.dart';
 import '../../widgets/cards/intern_card.dart';
+import '../../widgets/notifications_bell.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -60,16 +61,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Pro-Link Admin'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_outlined),
-            onPressed: _loadData,
-          ),
+        actions: const [
+          NotificationsBell(),
+          SizedBox(width: 4),
         ],
       ),
       drawer: _currentUser != null
           ? AppDrawer(user: _currentUser!)
           : null,
+      // Refresh moved off the AppBar onto a circular FAB at the bottom
+      // right per the dashboard reorganization.
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.accent,
+        onPressed: _loadData,
+        tooltip: 'Refresh',
+        child: const Icon(Icons.refresh, color: Colors.white),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
           : RefreshIndicator(

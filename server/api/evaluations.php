@@ -4,6 +4,7 @@
 
 require_once __DIR__ . '/../lib/helpers.php';
 require_once __DIR__ . '/../lib/db.php';
+require_once __DIR__ . '/../lib/notifications.php';
 pro_link_bootstrap();
 
 $pdo = pro_link_pdo();
@@ -68,6 +69,23 @@ if ($method === 'POST') {
     $r['internId'] = $r['intern_id'];
     $r['mentorId'] = $r['mentor_id'];
     $r['createdAt'] = pro_link_iso($r['created_at']);
+
+    // Notify the evaluated intern (the row stores the intern's profile id;
+    // notifications target the underlying user id, so look it up).
+    $userQ = $pdo->prepare('SELECT user_id FROM interns WHERE id = :i');
+    $userQ->execute([':i' => $r['intern_id']]);
+    $internUserId = $userQ->fetchColumn();
+    if ($internUserId) {
+        $score = number_format((float)$r['overall_score'], 1);
+        pro_link_notify(
+            $pdo,
+            (string)$internUserId,
+            'New evaluation',
+            $me['full_name'] . ' submitted an evaluation for you (' . $score . '/20).',
+            'evaluation'
+        );
+    }
+
     pro_link_ok(['evaluation' => $r], 201);
 }
 

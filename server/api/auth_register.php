@@ -1,8 +1,14 @@
 <?php
 // POST /api/auth/register  — self-service intern signup.
+//
+// Newly registered interns are created with status = 'pending' and are
+// NOT issued a session token. They cannot log in until an admin approves
+// the registration. Every active admin receives a notification so the
+// approval queue is surfaced in the bell icon on their dashboard.
 
 require_once __DIR__ . '/../lib/helpers.php';
 require_once __DIR__ . '/../lib/db.php';
+require_once __DIR__ . '/../lib/notifications.php';
 pro_link_bootstrap();
 pro_link_require_method('POST');
 
@@ -32,16 +38,15 @@ if ($exists->fetch()) {
     pro_link_fail(409, 'email_in_use', 'Email already registered.');
 }
 
-$token = pro_link_new_token();
 $hash = password_hash($password, PASSWORD_BCRYPT);
 
 $pdo->beginTransaction();
 try {
     $ins = $pdo->prepare('INSERT INTO users
-        (email, password_hash, full_name, phone, role, profile_photo_url, session_token)
-        VALUES (:e, :h, :n, :p, :r, :u, :t)
+        (email, password_hash, full_name, phone, role, profile_photo_url)
+        VALUES (:e, :h, :n, :p, :r, :u)
         RETURNING id, email, full_name, phone, role, is_active,
-                  profile_photo_url, created_at');
+                  must_change_password, profile_photo_url, created_at');
     $ins->execute([
         ':e' => $email,
         ':h' => $hash,
@@ -49,11 +54,11 @@ try {
         ':p' => $phone,
         ':r' => 'intern',
         ':u' => $profilePhotoUrl !== '' ? $profilePhotoUrl : null,
-        ':t' => $token,
     ]);
     $userRow = $ins->fetch();
     $userId = $userRow['id'];
 
+    // status defaults to 'pending' on the column.
     $pdo->prepare('INSERT INTO interns
         (user_id, student_id, university, specialization, department)
         VALUES (:u, :s, :un, :sp, :d)')
@@ -70,7 +75,19 @@ try {
     throw $e;
 }
 
+// Notify every admin that a new intern is awaiting approval.
+pro_link_notify_role(
+    $pdo,
+    'admin',
+    'New intern registration',
+    $fullName . ' (' . $email . ') registered and is awaiting your approval.',
+    'intern_pending'
+);
+
+// No token: the intern must wait for admin approval and then log in.
 pro_link_ok([
-    'token' => $token,
+    'pending' => true,
+    'message' => 'Your registration was received and is awaiting admin approval. '
+        . 'You will be able to log in as soon as the administrator approves your account.',
     'user' => pro_link_user_to_json($userRow),
 ], 201);

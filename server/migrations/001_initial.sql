@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS users (
     role TEXT NOT NULL CHECK (role IN ('admin', 'mentor', 'intern')),
     profile_photo_url TEXT,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    -- Forces a password change on next login. Set to TRUE when an admin
+    -- creates a mentor/admin account with a temporary password.
+    must_change_password BOOLEAN NOT NULL DEFAULT FALSE,
     session_token TEXT UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -104,6 +107,8 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 -- Session-token column (PHP auth stores a 64-char hex token per user).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token TEXT;
+-- Force-password-change flag (admin-created mentor / admin accounts).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE;
 DO $$
 BEGIN
     IF NOT EXISTS (

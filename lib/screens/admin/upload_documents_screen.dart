@@ -164,18 +164,107 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
     );
   }
 
-  Future<void> _uploadSchedule() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'doc', 'docx', 'png', 'jpg'],
-      // Required on web (and helpful elsewhere) so the picker returns
-      // raw bytes instead of just a path.
-      withData: true,
+  /// Bottom sheet that lets the admin pick between uploading a local
+  /// file or pasting an external URL — useful when a file exceeds the
+  /// upload limit or already lives on Drive / Dropbox / SharePoint.
+  Future<_UploadSource?> _chooseSource(String what) {
+    return showModalBottomSheet<_UploadSource>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.cardBorder,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Add a $what',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    )),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.upload_file_outlined,
+                  color: AppColors.accent),
+              title: const Text('Upload from device',
+                  style: TextStyle(color: AppColors.textPrimary)),
+              subtitle: const Text(
+                  'Pick a PDF, document or image from your device',
+                  style: TextStyle(
+                      color: AppColors.textSecondary, fontSize: 12)),
+              onTap: () => Navigator.pop(ctx, _UploadSource.file),
+            ),
+            ListTile(
+              leading: const Icon(Icons.link, color: AppColors.accent),
+              title: const Text('Attach a URL',
+                  style: TextStyle(color: AppColors.textPrimary)),
+              subtitle: const Text(
+                  'Paste a public link (Drive, Dropbox, SharePoint…)',
+                  style: TextStyle(
+                      color: AppColors.textSecondary, fontSize: 12)),
+              onTap: () => Navigator.pop(ctx, _UploadSource.url),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
     );
-    final picked = result?.files.single;
-    if (picked == null) return;
-    final xfile = _xFileFromPicked(picked);
-    if (xfile == null) return;
+  }
+
+  Future<String?> _promptUrl(String label) async {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text(label),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.url,
+          style: const TextStyle(color: AppColors.textPrimary),
+          decoration: const InputDecoration(
+            hintText: 'https://...',
+            prefixIcon: Icon(Icons.link),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final v = controller.text.trim();
+              if (v.isEmpty) return;
+              Navigator.pop(ctx, v);
+            },
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _uploadSchedule() async {
+    final source = await _chooseSource('schedule');
+    if (source == null) return;
 
     final title = await _promptText('Schedule title');
     if (title == null || title.isEmpty) return;
@@ -183,14 +272,41 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
         await _promptText('Week (e.g. Week 12 – March 2026)');
     if (weekLabel == null || weekLabel.isEmpty) return;
 
+    String url;
+    if (source == _UploadSource.url) {
+      final pasted = await _promptUrl('Schedule file URL');
+      if (pasted == null || pasted.isEmpty) return;
+      url = pasted;
+    } else {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg'],
+        withData: true,
+      );
+      final picked = result?.files.single;
+      if (picked == null) return;
+      final xfile = _xFileFromPicked(picked);
+      if (xfile == null) return;
+      setState(() => _uploading = true);
+      try {
+        final adminId =
+            context.read<AuthService>().currentUser?.id ?? 'unknown';
+        url = await context
+            .read<StorageService>()
+            .uploadSchedule(adminId, xfile, weekLabel);
+      } catch (e) {
+        if (mounted) {
+          AppUtils.showSnackBar(context, 'Upload error: $e', isError: true);
+        }
+        if (mounted) setState(() => _uploading = false);
+        return;
+      }
+    }
+
     setState(() => _uploading = true);
     try {
       final adminId =
           context.read<AuthService>().currentUser?.id ?? 'unknown';
-      final url = await context
-          .read<StorageService>()
-          .uploadSchedule(adminId, xfile, weekLabel);
-
       final schedule = ScheduleModel(
         id: '',
         title: title,
@@ -201,12 +317,14 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
         weekLabel: weekLabel,
       );
       await context.read<FirestoreService>().createSchedule(schedule);
-      // Bonus: surface the new schedule via local notification.
+      // Local notification is a UX polish; the server also fans out a
+      // push-style notification to every mentor + intern via the
+      // notifications table.
       await NotificationService.instance.notifyScheduleChanged(
         weekLabel: weekLabel,
       );
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Schedule uploaded');
+        AppUtils.showSnackBar(context, 'Schedule published');
       }
       _loadData();
     } catch (e) {
@@ -219,41 +337,68 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
   }
 
   Future<void> _uploadPolicy() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'doc', 'docx'],
-      withData: true,
-    );
-    final picked = result?.files.single;
-    if (picked == null) return;
-    final xfile = _xFileFromPicked(picked);
-    if (xfile == null) return;
+    final source = await _chooseSource('policy');
+    if (source == null) return;
 
     final title = await _promptText('Policy title');
     if (title == null || title.isEmpty) return;
     final description = await _promptText('Short description') ?? '';
 
+    String url;
+    String fileType;
+    if (source == _UploadSource.url) {
+      final pasted = await _promptUrl('Policy document URL');
+      if (pasted == null || pasted.isEmpty) return;
+      url = pasted;
+      // Best-effort guess at the extension from the URL itself; falls
+      // back to "link" so the list shows a generic link icon.
+      final guessed = p.extension(Uri.tryParse(pasted)?.path ?? '')
+          .replaceFirst('.', '');
+      fileType = guessed.isNotEmpty ? guessed : 'link';
+    } else {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx'],
+        withData: true,
+      );
+      final picked = result?.files.single;
+      if (picked == null) return;
+      final xfile = _xFileFromPicked(picked);
+      if (xfile == null) return;
+      setState(() => _uploading = true);
+      try {
+        final adminId =
+            context.read<AuthService>().currentUser?.id ?? 'unknown';
+        url = await context
+            .read<StorageService>()
+            .uploadPolicyDocument(adminId, xfile, title);
+        fileType = p.extension(picked.name).replaceFirst('.', '');
+      } catch (e) {
+        if (mounted) {
+          AppUtils.showSnackBar(context, 'Upload error: $e', isError: true);
+        }
+        if (mounted) setState(() => _uploading = false);
+        return;
+      }
+    }
+
     setState(() => _uploading = true);
     try {
       final adminId =
           context.read<AuthService>().currentUser?.id ?? 'unknown';
-      final url = await context
-          .read<StorageService>()
-          .uploadPolicyDocument(adminId, xfile, title);
-
       final training = TrainingFileModel(
         id: '',
         title: title,
         description: description,
         fileUrl: url,
-        fileType: p.extension(picked.name).replaceFirst('.', ''),
+        fileType: fileType,
         uploadedBy: adminId,
         uploadDate: DateTime.now(),
         tags: const ['policy'],
       );
       await context.read<FirestoreService>().createTrainingFile(training);
       if (mounted) {
-        AppUtils.showSnackBar(context, 'Policy uploaded');
+        AppUtils.showSnackBar(context, 'Policy published');
       }
       _loadData();
     } catch (e) {
@@ -409,6 +554,8 @@ class _DocumentTile extends StatelessWidget {
     );
   }
 }
+
+enum _UploadSource { file, url }
 
 class _EmptyList extends StatelessWidget {
   final IconData icon;

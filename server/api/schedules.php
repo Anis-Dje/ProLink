@@ -4,6 +4,7 @@
 
 require_once __DIR__ . '/../lib/helpers.php';
 require_once __DIR__ . '/../lib/db.php';
+require_once __DIR__ . '/../lib/notifications.php';
 pro_link_bootstrap();
 
 $pdo = pro_link_pdo();
@@ -43,6 +44,14 @@ if ($method === 'POST') {
     $r['uploadedBy'] = $r['uploaded_by'];
     $r['weekLabel'] = $r['week_label'];
     $r['uploadDate'] = pro_link_iso($r['upload_date']);
+
+    // Notify every mentor and intern that a new schedule is available.
+    $msg = 'A new schedule has been published'
+        . ((string)($body['weekLabel'] ?? '') !== ''
+            ? ' for ' . $body['weekLabel'] : '') . '.';
+    pro_link_notify_role($pdo, 'mentor', 'New schedule', $msg, 'schedule');
+    pro_link_notify_role($pdo, 'intern', 'New schedule', $msg, 'schedule');
+
     pro_link_ok(['schedule' => $r], 201);
 }
 

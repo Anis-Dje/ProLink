@@ -4,6 +4,7 @@
 
 require_once __DIR__ . '/../lib/helpers.php';
 require_once __DIR__ . '/../lib/db.php';
+require_once __DIR__ . '/../lib/notifications.php';
 pro_link_bootstrap();
 
 $pdo = pro_link_pdo();
@@ -68,6 +69,21 @@ if ($method === 'POST') {
         $r['tags'] = $t === '' ? [] :
             array_map(fn($x) => trim($x, '"'), str_getcsv($t));
     }
+
+    // Tell every intern that a new resource is available. When an admin
+    // uploads, also tell every mentor.
+    $title = (string)$body['title'];
+    pro_link_notify_role($pdo, 'intern',
+        'New training material',
+        '"' . $title . '" was added to your training materials.',
+        'training');
+    if ($me['role'] === 'admin') {
+        pro_link_notify_role($pdo, 'mentor',
+            'New training material',
+            '"' . $title . '" was added to your training materials.',
+            'training');
+    }
+
     pro_link_ok(['trainingFile' => $r], 201);
 }
 

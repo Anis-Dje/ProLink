@@ -35,6 +35,11 @@ class UserModel {
   final DateTime createdAt;
   final bool isActive;
 
+  /// True when the user must change their password before being allowed
+  /// to use the rest of the app — set when an admin provisions a mentor /
+  /// admin account with a temporary password.
+  final bool mustChangePassword;
+
   const UserModel({
     required this.id,
     required this.email,
@@ -44,6 +49,7 @@ class UserModel {
     this.profilePhotoUrl,
     required this.createdAt,
     required this.isActive,
+    this.mustChangePassword = false,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -57,6 +63,7 @@ class UserModel {
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.now(),
       isActive: json['isActive'] as bool? ?? true,
+      mustChangePassword: json['mustChangePassword'] as bool? ?? false,
     );
   }
 
@@ -69,6 +76,7 @@ class UserModel {
         'profilePhotoUrl': profilePhotoUrl,
         'createdAt': createdAt.toUtc().toIso8601String(),
         'isActive': isActive,
+        'mustChangePassword': mustChangePassword,
       };
 
   UserModel copyWith({
@@ -80,6 +88,7 @@ class UserModel {
     String? profilePhotoUrl,
     DateTime? createdAt,
     bool? isActive,
+    bool? mustChangePassword,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -90,6 +99,7 @@ class UserModel {
       profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
       createdAt: createdAt ?? this.createdAt,
       isActive: isActive ?? this.isActive,
+      mustChangePassword: mustChangePassword ?? this.mustChangePassword,
     );
   }
 }
