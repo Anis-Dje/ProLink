@@ -148,23 +148,16 @@ class _DrawerHeader extends StatelessWidget {
               border: Border.all(color: AppColors.accent, width: 2),
               color: AppColors.surface,
             ),
-            child: user.profilePhotoUrl != null
+            child: (user.profilePhotoUrl != null &&
+                    user.profilePhotoUrl!.isNotEmpty)
                 ? ClipOval(
                     child: Image.network(
                       user.profilePhotoUrl!,
                       fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _drawerInitial(user),
                     ),
                   )
-                : Center(
-                    child: Text(
-                      user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : 'U',
-                      style: const TextStyle(
-                        color: AppColors.accent,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
+                : _drawerInitial(user),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -204,6 +197,19 @@ class _DrawerHeader extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _drawerInitial(UserModel user) {
+    return Center(
+      child: Text(
+        user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : 'U',
+        style: const TextStyle(
+          color: AppColors.accent,
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

@@ -36,7 +36,13 @@ if ($method === 'PATCH') {
               'profilePhotoUrl' => 'profile_photo_url'] as $api => $col) {
         if (array_key_exists($api, $body)) {
             $sets[] = "$col = :$col";
-            $params[":$col"] = $body[$api];
+            $val = $body[$api];
+            // Coalesce empty strings to NULL for profile_photo_url so the
+            // Flutter "remove picture" flow can rely on a single null check.
+            if ($col === 'profile_photo_url' && $val === '') {
+                $val = null;
+            }
+            $params[":$col"] = $val;
         }
     }
     if (!$sets) pro_link_ok(['user' => pro_link_user_to_json($me)]);
