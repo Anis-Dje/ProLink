@@ -14,22 +14,42 @@ pro_link_current_user($pdo);
 // $_POST and $_FILES entirely before any code runs and the symptom is an
 // empty $_FILES with a non-empty Content-Length header. Without this
 // branch the client only sees `missing_file` which is misleading.
-$contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
-$postMax = pro_link_ini_to_bytes(ini_get('post_max_size'));
+$contentLength   = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+$contentType     = $_SERVER['CONTENT_TYPE'] ?? '';
+$postMax         = pro_link_ini_to_bytes(ini_get('post_max_size'));
+$uploadMax       = pro_link_ini_to_bytes(ini_get('upload_max_filesize'));
+$looksMultipart  = stripos($contentType, 'multipart/form-data') === 0;
+
 if ($contentLength > 0 && $postMax > 0 && $contentLength > $postMax
         && empty($_FILES) && empty($_POST)) {
     pro_link_fail(413, 'file_too_large',
         sprintf(
-            'Upload exceeds the server post_max_size limit of %s. '
-                . 'Increase post_max_size / upload_max_filesize in php.ini '
-                . '(see server/php.ini), or paste a public URL instead of uploading the file.',
-            ini_get('post_max_size')
+            'Upload exceeds the server post_max_size limit of %s '
+                . '(file is %s). Restart the dev server with '
+                . '`server/start.bat` (or `start.sh`) to apply the bumped '
+                . 'limits, or attach a URL instead of uploading.',
+            ini_get('post_max_size'),
+            pro_link_format_bytes($contentLength)
         ));
 }
 
 if (empty($_FILES['file'])) {
-    pro_link_fail(400, 'missing_file',
-        'No file uploaded under the "file" form field.');
+    // $_FILES is empty even though the client sent a multipart POST.
+    // Surface what PHP *thinks* the limits are so the operator knows
+    // whether the start scripts actually applied — and what the request
+    // body looked like — instead of showing a generic "missing_file".
+    pro_link_fail(400, 'missing_file', sprintf(
+        'PHP saw an empty $_FILES superglobal. '
+            . 'request_method=%s, content_type=%s, content_length=%s, '
+            . 'post_max_size=%s, upload_max_filesize=%s. '
+            . 'If content_length is bigger than post_max_size, restart '
+            . 'the dev server with server/start.bat (-d post_max_size=55M).',
+        $_SERVER['REQUEST_METHOD'] ?? '?',
+        $contentType !== '' ? $contentType : '<missing>',
+        $contentLength > 0 ? pro_link_format_bytes($contentLength) : '<missing>',
+        ini_get('post_max_size'),
+        ini_get('upload_max_filesize')
+    ));
 }
 $f = $_FILES['file'];
 if ($f['error'] !== UPLOAD_ERR_OK) {
@@ -90,6 +110,14 @@ function pro_link_upload_error_message(int $code): string {
         UPLOAD_ERR_CANT_WRITE => 'Server failed to write the upload to disk.',
         UPLOAD_ERR_EXTENSION => 'A PHP extension stopped the upload.',
     ][$code] ?? ('Upload failed with code ' . $code . '.');
+}
+
+/** Format an integer byte count as a short human-readable string. */
+function pro_link_format_bytes(int $bytes): string {
+    if ($bytes < 1024) return $bytes . 'B';
+    if ($bytes < 1024 * 1024) return sprintf('%.1fKB', $bytes / 1024);
+    if ($bytes < 1024 * 1024 * 1024) return sprintf('%.1fMB', $bytes / 1024 / 1024);
+    return sprintf('%.2fGB', $bytes / 1024 / 1024 / 1024);
 }
 
 /**
