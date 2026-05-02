@@ -205,7 +205,8 @@ class _WorkIdCardScreenState extends State<WorkIdCardScreen> {
                 _pickFromUrl();
               },
             ),
-            if (_user?.profilePhotoUrl != null)
+            if (_user?.profilePhotoUrl != null &&
+                _user!.profilePhotoUrl!.isNotEmpty)
               ListTile(
                 leading: const Icon(Icons.delete_outline,
                     color: AppColors.error),

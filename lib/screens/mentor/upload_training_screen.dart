@@ -304,7 +304,12 @@ class _UploadTrainingScreenState extends State<UploadTrainingScreen> {
     try {
       final mentorId =
           context.read<AuthService>().currentUser?.id ?? 'unknown';
-      final ext = p.extension(url).replaceFirst('.', '').toLowerCase();
+      // Strip query/fragment first — `p.extension` treats input as a fs path
+      // and would otherwise return e.g. `.pdf?token=abc` from a presigned URL.
+      final ext = p
+          .extension(Uri.parse(url).path)
+          .replaceFirst('.', '')
+          .toLowerCase();
       final training = TrainingFileModel(
         id: '',
         title: info.title,
