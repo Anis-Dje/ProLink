@@ -33,10 +33,26 @@ function pro_link_pdo(): PDO {
     }
     $sslmode = $query['sslmode'] ?? 'require';
 
+    // Neon SNI workaround. Older libpq builds (notably the one bundled
+    // with XAMPP on Windows) cannot negotiate SNI, so Neon doesn't know
+    // which compute endpoint a TLS handshake is for and rejects the
+    // connection with "endpoint ID not specified". Neon's documented
+    // workaround is to send the endpoint ID in libpq's `options`
+    // connection parameter; modern libpq builds ignore it harmlessly.
+    $options = $query['options'] ?? null;
+    if ($options === null
+        && str_ends_with($host, '.neon.tech')
+        && preg_match('/^(ep-[a-z0-9-]+?)(?:-pooler)?\./', $host, $m)) {
+        $options = 'endpoint=' . $m[1];
+    }
+
     $dsn = sprintf(
         'pgsql:host=%s;port=%d;dbname=%s;sslmode=%s',
         $host, $port, $dbname, $sslmode
     );
+    if ($options !== null && $options !== '') {
+        $dsn .= ";options='" . $options . "'";
+    }
 
     try {
         // EMULATE_PREPARES must be true when running against a
