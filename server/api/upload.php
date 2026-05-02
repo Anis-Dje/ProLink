@@ -46,6 +46,15 @@ $proLinkLog(sprintf('  auth_header_present=%s',
 pro_link_current_user($pdo);
 $proLinkLog('checkpoint: auth passed');
 
+// Wrap pro_link_fail so every failure inside upload.php leaves a log
+// line — otherwise the script just exits and we have no idea which
+// branch fired.
+$proLinkFail = function (int $status, string $code, string $message)
+        use ($proLinkLog): void {
+    $proLinkLog(sprintf('FAIL %d %s: %s', $status, $code, $message));
+    pro_link_fail($status, $code, $message);
+};
+
 // Detect the most common silent failure on a stock PHP install: the
 // request body is bigger than `post_max_size`, in which case PHP discards
 // $_POST and $_FILES entirely before any code runs and the symptom is an
@@ -57,9 +66,16 @@ $postMax         = pro_link_ini_to_bytes(ini_get('post_max_size'));
 $uploadMax       = pro_link_ini_to_bytes(ini_get('upload_max_filesize'));
 $looksMultipart  = stripos($contentType, 'multipart/form-data') === 0;
 
+$proLinkLog(sprintf('checkpoint: file meta name=%s size=%s tmp_name=%s err=%s',
+    $_FILES['file']['name'] ?? '<none>',
+    $_FILES['file']['size'] ?? '<none>',
+    $_FILES['file']['tmp_name'] ?? '<none>',
+    $_FILES['file']['error'] ?? '<none>'
+));
+
 if ($contentLength > 0 && $postMax > 0 && $contentLength > $postMax
         && empty($_FILES) && empty($_POST)) {
-    pro_link_fail(413, 'file_too_large',
+    $proLinkFail(413, 'file_too_large',
         sprintf(
             'Upload exceeds the server post_max_size limit of %s '
                 . '(file is %s). Restart the dev server with '
@@ -75,7 +91,7 @@ if (empty($_FILES['file'])) {
     // Surface what PHP *thinks* the limits are so the operator knows
     // whether the start scripts actually applied — and what the request
     // body looked like — instead of showing a generic "missing_file".
-    pro_link_fail(400, 'missing_file', sprintf(
+    $proLinkFail(400, 'missing_file', sprintf(
         'PHP saw an empty $_FILES superglobal. '
             . 'request_method=%s, content_type=%s, content_length=%s, '
             . 'post_max_size=%s, upload_max_filesize=%s. '
@@ -90,7 +106,7 @@ if (empty($_FILES['file'])) {
 }
 $f = $_FILES['file'];
 if ($f['error'] !== UPLOAD_ERR_OK) {
-    pro_link_fail($f['error'] === UPLOAD_ERR_INI_SIZE
+    $proLinkFail($f['error'] === UPLOAD_ERR_INI_SIZE
             || $f['error'] === UPLOAD_ERR_FORM_SIZE ? 413 : 400,
         pro_link_upload_error_code($f['error']),
         pro_link_upload_error_message($f['error']));
@@ -120,8 +136,7 @@ $proLinkLog(sprintf(
     is_writable(dirname($dest)) ? 'yes' : 'no'
 ));
 if (!move_uploaded_file($f['tmp_name'], $dest)) {
-    $proLinkLog('checkpoint: move_uploaded_file FAILED');
-    pro_link_fail(500, 'save_failed', sprintf(
+    $proLinkFail(500, 'save_failed', sprintf(
         'Could not save uploaded file. tmp=%s dest=%s tmp_exists=%s dest_dir_writable=%s',
         $f['tmp_name'] ?? '<none>',
         $dest,
