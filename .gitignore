@@ -59,3 +59,4 @@ firebase.json
 .firebaserc
 GoogleService-Info.plist
 google-services.json
+server/upload.log

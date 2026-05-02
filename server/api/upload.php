@@ -6,9 +6,10 @@ require_once __DIR__ . '/../lib/db.php';
 pro_link_bootstrap();
 pro_link_require_method('POST');
 
-// Identifies which version of this file is running so the operator can
-// confirm they're not stuck on an OPcache'd old copy.
-error_log(sprintf(
+// Diagnostics so the operator can see exactly what PHP saw on every
+// upload request without depending on log_errors / error_log ini state:
+// we write to STDERR directly *and* append to server/upload.log.
+$proLinkUploadDiag = sprintf(
     '[pro-link] upload.php v2: post_max_size=%s, upload_max_filesize=%s, '
         . 'content_length=%s, content_type=%s, files_keys=[%s]',
     ini_get('post_max_size'),
@@ -16,7 +17,12 @@ error_log(sprintf(
     $_SERVER['CONTENT_LENGTH'] ?? '<missing>',
     $_SERVER['CONTENT_TYPE'] ?? '<missing>',
     implode(',', array_keys($_FILES))
-));
+);
+@fwrite(STDERR, $proLinkUploadDiag . "\n");
+@file_put_contents(__DIR__ . '/../upload.log',
+    date('c') . ' ' . $proLinkUploadDiag . "\n",
+    FILE_APPEND);
+error_log($proLinkUploadDiag);
 
 $pdo = pro_link_pdo();
 pro_link_current_user($pdo);

@@ -33,5 +33,10 @@ php ^
   -d opcache.enable=0 ^
   -d opcache.validate_timestamps=1 ^
   -d opcache.revalidate_freq=0 ^
+  -d log_errors=1 ^
+  -d error_log= ^
+  -d display_errors=1 ^
+  -d display_startup_errors=1 ^
+  -d error_reporting=E_ALL ^
   -S 0.0.0.0:8081 -t "%~dp0." "%~dp0router.php"
 endlocal
