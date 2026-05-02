@@ -65,7 +65,7 @@ REST API & PHP modules).
   `upload.php`, …), exactly the `read.php` / `write.php` style from the
   *Flutter – REST API* slides.
 - **Neon Postgres** is reached through PDO (`pdo_pgsql`). We swapped the
-  course's local MySQL / WAMP setup for Neon so the DB can be cloud-hosted,
+  course's local MySQL / WAMP setup for Neon so the DB can be cloud-hosted 
   but kept the single-file-per-endpoint PHP layout.
 - `password_hash()` / `password_verify()` for credentials; random 64-char
   hex tokens for sessions (no JWT library).
