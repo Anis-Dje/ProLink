@@ -42,6 +42,13 @@ class ApiClient {
       if (json) 'content-type': 'application/json; charset=utf-8',
       'accept': 'application/json',
       if (_token != null) 'authorization': 'Bearer $_token',
+      // ngrok-free intercepts requests it considers "browser-like" and
+      // returns an HTML interstitial instead of forwarding to the
+      // backend, which breaks multipart uploads (the binary body gets
+      // replaced by an HTML page). This header is the documented
+      // bypass — works for both ngrok-free and ngrok-paid; harmless
+      // when the backend is reached directly without ngrok.
+      'ngrok-skip-browser-warning': 'true',
     };
   }
 
