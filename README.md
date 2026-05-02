@@ -203,6 +203,23 @@ On a fresh DB no admins exist yet. The simplest path:
 3. Log out and log back in — the app routes you to the admin dashboard, where
    you can create more mentors / admins from the User Management screen.
 
+### 7. (Optional) Demo seed for end-to-end testing
+For a populated environment with 3 mentors, 10 interns across different
+fields, mentor assignments, and one week of past attendance, paste
+[`server/seeds/demo_seed.sql`](server/seeds/demo_seed.sql) into Neon's
+SQL editor (or run it with `psql`). All seeded accounts use the password
+`123456`. See [`server/seeds/README.md`](server/seeds/README.md) for
+details.
+
+## Legal
+
+- [Privacy Policy](docs/legal/PRIVACY_POLICY.md)
+- [Terms of Service](docs/legal/TERMS_OF_SERVICE.md)
+
+These templates describe how Pro-Link handles user data and the rules
+of acceptable use; replace the placeholder contact addresses before
+publishing the app to a public store.
+
 ## REST API surface
 
 See [`server/README.md`](server/README.md) for the full endpoint reference.
