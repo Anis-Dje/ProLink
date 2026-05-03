@@ -5,13 +5,58 @@
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '/';
 
+/**
+ * Best-effort MIME guess that does NOT require the `fileinfo` PHP
+ * extension. We previously called `mime_content_type()` directly,
+ * but on some XAMPP / Windows PHP setups `fileinfo` is disabled and
+ * the call fatals out with `Call to undefined function`, taking the
+ * whole /files/ static handler down with it. Falls back to a small
+ * extension table covering the formats Pro-Link actually serves
+ * (PDF, common images, office docs); unknown types degrade to
+ * application/octet-stream so the browser / Flutter viewer can still
+ * download the bytes.
+ */
+function pro_link_mime_for(string $path): string
+{
+    if (function_exists('mime_content_type')) {
+        $detected = @mime_content_type($path);
+        if (is_string($detected) && $detected !== '') {
+            return $detected;
+        }
+    }
+    $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    static $map = [
+        'pdf'  => 'application/pdf',
+        'png'  => 'image/png',
+        'jpg'  => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'gif'  => 'image/gif',
+        'webp' => 'image/webp',
+        'bmp'  => 'image/bmp',
+        'svg'  => 'image/svg+xml',
+        'txt'  => 'text/plain; charset=utf-8',
+        'csv'  => 'text/csv; charset=utf-8',
+        'json' => 'application/json',
+        'doc'  => 'application/msword',
+        'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xls'  => 'application/vnd.ms-excel',
+        'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'ppt'  => 'application/vnd.ms-powerpoint',
+        'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'zip'  => 'application/zip',
+    ];
+    return $map[$ext] ?? 'application/octet-stream';
+}
+
 // Static uploads.
 if (preg_match('#^/files/([A-Za-z0-9._-]+)$#', $uri, $m)) {
     $path = __DIR__ . '/uploads/' . $m[1];
     if (is_file($path)) {
-        $mime = mime_content_type($path) ?: 'application/octet-stream';
-        header('Content-Type: ' . $mime);
+        header('Content-Type: ' . pro_link_mime_for($path));
         header('Content-Length: ' . filesize($path));
+        // Lets the Flutter in-app viewer / browser cache the file. Not
+        // strictly required, but harmless and friendlier on slow links.
+        header('Cache-Control: private, max-age=3600');
         readfile($path);
         return true;
     }

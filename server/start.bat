@@ -34,5 +34,6 @@ php ^
   -d max_execution_time=60 ^
   -d max_input_time=60 ^
   -d extension=pdo_pgsql ^
+  -d extension=fileinfo ^
   -S 0.0.0.0:8081 -t "%~dp0." "%~dp0router.php"
 endlocal
