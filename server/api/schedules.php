@@ -1,6 +1,7 @@
 <?php
-// GET /api/schedules/ — list office schedules / timetables
-// POST /api/schedules/ — admin uploads a new schedule (already-uploaded file url)
+// GET    /api/schedules/        — list office schedules / timetables
+// POST   /api/schedules/        — admin uploads a new schedule (already-uploaded file url)
+// DELETE /api/schedules/<id>    — admin removes a schedule (and its uploaded file)
 
 require_once __DIR__ . '/../lib/helpers.php';
 require_once __DIR__ . '/../lib/db.php';
@@ -55,4 +56,22 @@ if ($method === 'POST') {
     pro_link_ok(['schedule' => $r], 201);
 }
 
-pro_link_fail(405, 'method_not_allowed', 'Use GET or POST.');
+if ($method === 'DELETE') {
+    pro_link_require_role($me, 'admin');
+    $id = $_GET['id'] ?? '';
+    if ($id === '') {
+        pro_link_fail(400, 'missing_id', 'DELETE /api/schedules/<id> requires an id.');
+    }
+    $sel = $pdo->prepare('SELECT file_url FROM schedules WHERE id = :id');
+    $sel->execute([':id' => $id]);
+    $row = $sel->fetch();
+    if ($row === false) {
+        pro_link_fail(404, 'not_found', 'No schedule with that id.');
+    }
+    $del = $pdo->prepare('DELETE FROM schedules WHERE id = :id');
+    $del->execute([':id' => $id]);
+    pro_link_delete_uploaded_file($row['file_url'] ?? '');
+    pro_link_ok(['deleted' => $id]);
+}
+
+pro_link_fail(405, 'method_not_allowed', 'Use GET, POST, or DELETE.');

@@ -1,6 +1,7 @@
 <?php
-// GET  /api/training-files/   — list training modules / resources
-// POST /api/training-files/   — mentor/admin publishes a resource
+// GET    /api/training-files/        — list training modules / resources
+// POST   /api/training-files/        — mentor/admin publishes a resource
+// DELETE /api/training-files/<id>    — uploader (or admin) removes a resource
 
 require_once __DIR__ . '/../lib/helpers.php';
 require_once __DIR__ . '/../lib/db.php';
@@ -87,4 +88,27 @@ if ($method === 'POST') {
     pro_link_ok(['trainingFile' => $r], 201);
 }
 
-pro_link_fail(405, 'method_not_allowed', 'Use GET or POST.');
+if ($method === 'DELETE') {
+    $id = $_GET['id'] ?? '';
+    if ($id === '') {
+        pro_link_fail(400, 'missing_id',
+            'DELETE /api/training-files/<id> requires an id.');
+    }
+    $sel = $pdo->prepare('SELECT uploaded_by, file_url FROM training_files WHERE id = :id');
+    $sel->execute([':id' => $id]);
+    $row = $sel->fetch();
+    if ($row === false) {
+        pro_link_fail(404, 'not_found', 'No training file with that id.');
+    }
+    // Admins can delete anything; mentors only their own uploads.
+    if ($me['role'] !== 'admin' && $row['uploaded_by'] !== $me['id']) {
+        pro_link_fail(403, 'forbidden',
+            'Only admins or the original uploader can delete this resource.');
+    }
+    $del = $pdo->prepare('DELETE FROM training_files WHERE id = :id');
+    $del->execute([':id' => $id]);
+    pro_link_delete_uploaded_file($row['file_url'] ?? '');
+    pro_link_ok(['deleted' => $id]);
+}
+
+pro_link_fail(405, 'method_not_allowed', 'Use GET, POST, or DELETE.');

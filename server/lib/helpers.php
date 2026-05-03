@@ -153,6 +153,25 @@ function pro_link_iso(?string $ts): ?string {
     }
 }
 
+/**
+ * Best-effort delete of a previously-uploaded file from the local
+ * `server/uploads/` directory. Accepts any URL produced by upload.php
+ * (e.g. `https://host/files/<uuid>.pdf`) or a bare filename. Files we
+ * don't own (external links pasted by the user) are silently ignored.
+ */
+function pro_link_delete_uploaded_file(string $fileUrl): void {
+    if ($fileUrl === '') return;
+    // Only consider URLs/paths that point at our `/files/<name>` route.
+    if (!preg_match('#/files/([A-Za-z0-9._-]+)$#', $fileUrl, $m)) {
+        return;
+    }
+    $name = $m[1];
+    $path = __DIR__ . '/../uploads/' . $name;
+    if (is_file($path)) {
+        @unlink($path);
+    }
+}
+
 function pro_link_public_base_url(): string {
     $env = getenv('PUBLIC_BASE_URL');
     if ($env !== false && $env !== '') {
