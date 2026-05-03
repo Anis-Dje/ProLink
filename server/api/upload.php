@@ -96,6 +96,18 @@ if ($rawHeader === '' && function_exists('getallheaders')) {
         }
     }
 }
+// Some HTTP middleware drops custom headers; the client therefore also
+// sends `?filename=...` as a query-string fallback. Either source is fine.
+if ($rawHeader === '' && !empty($_GET['filename'])) {
+    $rawHeader = (string)$_GET['filename'];
+}
+// If the client sent a non-multipart body but didn't include a filename
+// anywhere we can find, generate a placeholder so the upload can still
+// succeed instead of a confusing 400.
+if ($rawHeader === '' && !$looksMultipart && $contentLength > 0) {
+    $rawHeader = 'upload_' . time() . '.bin';
+    $proLinkLog('raw-upload: missing filename, using fallback ' . $rawHeader);
+}
 // Also dump the full header list to upload.log so we can audit what
 // PHP actually received in case the header is missing entirely.
 if (function_exists('getallheaders')) {

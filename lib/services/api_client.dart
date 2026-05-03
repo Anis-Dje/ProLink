@@ -116,12 +116,30 @@ class ApiClient {
   /// quirks, and the backend handles both formats.
   Future<String> uploadFile(XFile file, {String fieldName = 'file'}) async {
     final bytes = await file.readAsBytes();
-    final filename = p.basename(file.path.isEmpty ? file.name : file.path);
+    // Derive a usable filename. `cross_file` on Android sometimes
+    // generates a fake path like `/tmp/cross_file_1700000000000` for
+    // XFile.fromData, so we prefer the explicit .name and only fall
+    // back to basename(path) when .name is missing. As a last resort
+    // we synthesise something based on the timestamp so the server
+    // always has a usable identifier (with at least an extension hint).
+    String filename = file.name;
+    if (filename.isEmpty && file.path.isNotEmpty) {
+      filename = p.basename(file.path);
+    }
+    if (filename.isEmpty || !filename.contains('.')) {
+      filename = 'upload_${DateTime.now().millisecondsSinceEpoch}'
+          '${filename.isEmpty ? '.bin' : ''}';
+    }
+
+    // Send the filename via both an X-Filename header and a `filename`
+    // query parameter — some HTTP middleware (and PHP's built-in dev
+    // server in some configs) silently drops custom headers, while
+    // query strings always survive. The server checks both.
+    final uri = _uri('/upload/', {'filename': filename});
     final headers = _headers(json: false)
       ..['content-type'] = 'application/octet-stream'
       ..['x-filename'] = filename;
-    final res = await http.post(_uri('/upload/'),
-        headers: headers, body: bytes);
+    final res = await http.post(uri, headers: headers, body: bytes);
     final body = _decode(res);
     return body['url'] as String;
   }
