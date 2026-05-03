@@ -40,18 +40,18 @@ class AuthService extends ChangeNotifier {
   /// Self-service intern registration. The backend creates a `pending`
   /// intern row and does NOT issue a session token — the intern has to
   /// wait for an admin approval before they can log in. The returned
-  /// [UserModel] is the freshly created (still-pending) user; the caller
-  /// should treat the response as informational and route the user back
-  /// to the login screen.
-  Future<UserModel> registerIntern({
+  /// [InternRegistrationResult] carries the freshly created user plus
+  /// the auto-generated student id (`STU-YYYY-NNN`) the server
+  /// assigned, so the registration screen can show it to the user.
+  Future<InternRegistrationResult> registerIntern({
     required String email,
     required String password,
     required String fullName,
     required String phone,
-    required String studentId,
     required String university,
     required String specialization,
     required String department,
+    required bool acceptedLegal,
     String? profilePhotoUrl,
   }) async {
     final res = await _api.post('/auth/register', body: {
@@ -59,13 +59,16 @@ class AuthService extends ChangeNotifier {
       'password': password,
       'fullName': fullName,
       'phone': phone,
-      'studentId': studentId,
       'university': university,
       'specialization': specialization,
       'department': department,
+      'acceptedLegal': acceptedLegal,
       if (profilePhotoUrl != null) 'profilePhotoUrl': profilePhotoUrl,
     });
-    return UserModel.fromJson((res['user'] as Map).cast<String, dynamic>());
+    return InternRegistrationResult(
+      user: UserModel.fromJson((res['user'] as Map).cast<String, dynamic>()),
+      studentId: res['studentId'] as String?,
+    );
   }
 
   /// Admin-only: provision a mentor or admin user. Does not sign the caller in
@@ -155,4 +158,17 @@ class AuthService extends ChangeNotifier {
       'Password reset is not implemented on the new backend yet.',
     );
   }
+}
+
+/// Result of [AuthService.registerIntern].
+class InternRegistrationResult {
+  const InternRegistrationResult({required this.user, this.studentId});
+
+  /// Freshly created (still-pending) user.
+  final UserModel user;
+
+  /// Server-assigned student id in `STU-YYYY-NNN` format. Null if the
+  /// server is older than this client (no `studentId` field in the
+  /// response).
+  final String? studentId;
 }

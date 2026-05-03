@@ -9,6 +9,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/utils/app_utils.dart';
 import '../../services/auth_service.dart';
 import '../../services/api_client.dart';
+import '../../widgets/auth/legal_links.dart';
 import '../../widgets/common/loading_overlay.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -25,7 +26,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _studentIdController = TextEditingController();
   final _specializationController = TextEditingController();
 
   String _selectedUniversity = AppConstants.universities.first;
@@ -33,6 +33,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  bool _acceptedLegal = false;
   XFile? _profilePhoto;
   Uint8List? _profilePhotoBytes;
 
@@ -43,7 +44,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _phoneController.dispose();
-    _studentIdController.dispose();
     _specializationController.dispose();
     super.dispose();
   }
@@ -69,6 +69,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_acceptedLegal) {
+      AppUtils.showSnackBar(
+        context,
+        'Please accept the Privacy Policy and Terms & Conditions.',
+        isError: true,
+      );
+      return;
+    }
     setState(() => _isLoading = true);
     try {
       // Newly registered interns are created in `pending` status and are
@@ -76,15 +84,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // before the intern can log in. Routes back to the login screen
       // with a confirmation message.
       final authService = context.read<AuthService>();
-      await authService.registerIntern(
+      final result = await authService.registerIntern(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         fullName: _fullNameController.text.trim(),
         phone: _phoneController.text.trim(),
-        studentId: _studentIdController.text.trim(),
         university: _selectedUniversity,
         specialization: _specializationController.text.trim(),
         department: _selectedDepartment,
+        acceptedLegal: true,
       );
 
       if (!mounted) return;
@@ -98,12 +106,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
               'profile after the admin approves your account.',
         );
       }
-      Navigator.of(context)
-          .pushNamedAndRemoveUntil('/login', (route) => false, arguments: {
-        'pendingMessage':
-            'Your account was created and is awaiting admin approval. '
-                'You will be able to log in as soon as the administrator approves it.',
-      });
+      final assignedId = result.studentId;
+      final pendingMessage = assignedId != null && assignedId.isNotEmpty
+          ? 'Your account was created and is awaiting admin approval. '
+              'Your student ID is $assignedId. You will be able to log '
+              'in as soon as the administrator approves it.'
+          : 'Your account was created and is awaiting admin approval. '
+              'You will be able to log in as soon as the administrator '
+              'approves it.';
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/login',
+        (route) => false,
+        arguments: {'pendingMessage': pendingMessage},
+      );
     } catch (e) {
       if (mounted) {
         String msg = 'Registration error. Please try again.';
@@ -196,12 +211,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ]),
                   const SizedBox(height: 20),
                   _buildSection('Academic information', [
-                    _buildTextField(
-                      controller: _studentIdController,
-                      label: 'Student ID',
-                      icon: Icons.badge_outlined,
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                    ),
+                    _buildStudentIdHint(),
                     const SizedBox(height: 14),
                     _buildDropdown(
                       label: 'University',
@@ -253,9 +263,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       },
                     ),
                   ]),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
+                  _buildLegalAgreement(),
+                  const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: _register,
+                    onPressed: _acceptedLegal ? _register : null,
                     style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
                     child: const Text(
                       'Submit request',
@@ -280,6 +292,74 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildStudentIdHint() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.badge_outlined, color: AppColors.accent, size: 20),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Your student ID will be issued automatically after the '
+              'administrator approves your account (format: STU-YYYY-NNN).',
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegalAgreement() {
+    return LegalDocumentsLoader(
+      builder: (context, docs) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _acceptedLegal
+                  ? AppColors.accent
+                  : AppColors.cardBorder,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Checkbox(
+                value: _acceptedLegal,
+                activeColor: AppColors.accent,
+                onChanged: (v) =>
+                    setState(() => _acceptedLegal = v ?? false),
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(
+                      () => _acceptedLegal = !_acceptedLegal),
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: LegalLinksLine(
+                      docs: docs,
+                      leadingText: 'I have read and accept the ',
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
