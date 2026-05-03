@@ -106,21 +106,22 @@ class ApiClient {
     return _decode(res);
   }
 
-  /// Multipart upload. Returns the public file URL served by PHP at
-  /// `/files/<name>`. Works on both mobile (file system path) and web
-  /// (only bytes available) by reading the file through `XFile`.
+  /// Raw-body upload. Returns the public file URL served by PHP at
+  /// `/files/<name>`. We deliberately do NOT use multipart/form-data:
+  /// the dart `http` package's auto-generated boundary characters and
+  /// ngrok's request inspection have repeatedly produced multipart
+  /// bodies that PHP's parser rejects with UPLOAD_ERR_NO_FILE despite
+  /// the bytes arriving intact. Sending the raw bytes with the original
+  /// name in `X-Filename` is shorter on the wire, immune to boundary
+  /// quirks, and the backend handles both formats.
   Future<String> uploadFile(XFile file, {String fieldName = 'file'}) async {
     final bytes = await file.readAsBytes();
     final filename = p.basename(file.path.isEmpty ? file.name : file.path);
-    final req = http.MultipartRequest('POST', _uri('/upload/'))
-      ..headers.addAll(_headers(json: false))
-      ..files.add(http.MultipartFile.fromBytes(
-        fieldName,
-        bytes,
-        filename: filename,
-      ));
-    final streamed = await req.send();
-    final res = await http.Response.fromStream(streamed);
+    final headers = _headers(json: false)
+      ..['content-type'] = 'application/octet-stream'
+      ..['x-filename'] = filename;
+    final res = await http.post(_uri('/upload/'),
+        headers: headers, body: bytes);
     final body = _decode(res);
     return body['url'] as String;
   }

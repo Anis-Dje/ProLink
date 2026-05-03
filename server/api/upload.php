@@ -73,6 +73,60 @@ $proLinkLog(sprintf('checkpoint: file meta name=%s size=%s tmp_name=%s err=%s',
     $_FILES['file']['error'] ?? '<none>'
 ));
 
+// ---- Raw-body upload path -------------------------------------------------
+// ngrok-free + the dart `http` package's auto-generated multipart boundary
+// have proven unreliable on real Android devices: the binary body reaches
+// the backend with the right Content-Length but PHP's multipart parser
+// rejects the file part. To stay immune to anything ngrok or the http
+// package does to the wire format, the client may also POST the file as
+// a raw body (any Content-Type other than multipart/form-data) with the
+// original filename in the `X-Filename` header. We materialise that body
+// to a temp file and then re-enter the same save / response code path
+// the multipart branch uses.
+$rawHeader = $_SERVER['HTTP_X_FILENAME'] ?? '';
+if ($rawHeader !== '' && !$looksMultipart) {
+    $rawName = basename($rawHeader);
+    $tmp = tempnam(sys_get_temp_dir(), 'pro_link_raw_');
+    if ($tmp === false) {
+        $proLinkFail(500, 'server_misconfig',
+            'Could not create temp file for raw upload.');
+    }
+    $in = fopen('php://input', 'rb');
+    $out = fopen($tmp, 'wb');
+    $written = 0;
+    if ($in && $out) {
+        while (!feof($in)) {
+            $chunk = fread($in, 65536);
+            if ($chunk === false) break;
+            fwrite($out, $chunk);
+            $written += strlen($chunk);
+        }
+    }
+    if ($in) fclose($in);
+    if ($out) fclose($out);
+    $proLinkLog(sprintf(
+        'raw-upload: x_filename=%s bytes=%d tmp=%s',
+        $rawName, $written, $tmp));
+    if ($written <= 0) {
+        @unlink($tmp);
+        $proLinkFail(400, 'missing_file',
+            'Raw upload body was empty (X-Filename header was present but no bytes followed).');
+    }
+    // Synthesise a $_FILES['file'] entry so the rest of the script can run
+    // unchanged. We use UPLOAD_ERR_OK and set tmp_name to our temp path.
+    // Note: move_uploaded_file() rejects paths that were not created by a
+    // multipart upload, so we have to use rename() instead in this branch.
+    $_FILES['file'] = [
+        'name'     => $rawName,
+        'type'     => $_SERVER['CONTENT_TYPE'] ?? 'application/octet-stream',
+        'size'     => $written,
+        'tmp_name' => $tmp,
+        'error'    => UPLOAD_ERR_OK,
+    ];
+    $proLinkRawUpload = true; // signal below to use rename() not move_uploaded_file()
+}
+// ---------------------------------------------------------------------------
+
 if ($contentLength > 0 && $postMax > 0 && $contentLength > $postMax
         && empty($_FILES) && empty($_POST)) {
     $proLinkFail(413, 'file_too_large',
@@ -135,13 +189,20 @@ $proLinkLog(sprintf(
     (isset($f['tmp_name']) && is_file($f['tmp_name'])) ? 'yes' : 'no',
     is_writable(dirname($dest)) ? 'yes' : 'no'
 ));
-if (!move_uploaded_file($f['tmp_name'], $dest)) {
+// Raw uploads land in our own temp file (created via tempnam, not the
+// multipart machinery), so move_uploaded_file() refuses them — we have
+// to fall back to rename() in that case.
+$saveOk = !empty($proLinkRawUpload)
+    ? @rename($f['tmp_name'], $dest)
+    : @move_uploaded_file($f['tmp_name'], $dest);
+if (!$saveOk) {
     $proLinkFail(500, 'save_failed', sprintf(
-        'Could not save uploaded file. tmp=%s dest=%s tmp_exists=%s dest_dir_writable=%s',
+        'Could not save uploaded file. tmp=%s dest=%s tmp_exists=%s dest_dir_writable=%s raw=%s',
         $f['tmp_name'] ?? '<none>',
         $dest,
         (isset($f['tmp_name']) && is_file($f['tmp_name'])) ? 'yes' : 'no',
-        is_writable(dirname($dest)) ? 'yes' : 'no'
+        is_writable(dirname($dest)) ? 'yes' : 'no',
+        !empty($proLinkRawUpload) ? 'yes' : 'no'
     ));
 }
 
