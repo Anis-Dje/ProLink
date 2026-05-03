@@ -109,7 +109,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             label: const Text('Open / Download'),
             onPressed: () {
               Navigator.of(ctx).pop();
-              FileLauncher.open(context, s.fileUrl);
+              FileLauncher.open(context, s.fileUrl, title: s.title);
             },
           ),
         ],

@@ -42,7 +42,32 @@ class ApiClient {
       if (json) 'content-type': 'application/json; charset=utf-8',
       'accept': 'application/json',
       if (_token != null) 'authorization': 'Bearer $_token',
+      // Bypasses ngrok-free's "you are about to visit" interstitial
+      // when the API is exposed through a free tunnel. Harmless
+      // otherwise.
+      'ngrok-skip-browser-warning': 'true',
     };
+  }
+
+  /// Downloads a file URL as raw bytes. Used by the in-app file viewer
+  /// so PDF / image previews work even when the URL sits behind a
+  /// `ngrok-free` interstitial (which blocks browser-style requests
+  /// without the skip header above).
+  Future<List<int>> downloadBytes(String url) async {
+    final uri = Uri.parse(url);
+    if (kDebugMode) debugPrint('[ApiClient] DOWNLOAD $uri');
+    final res = await http.get(uri, headers: {
+      'accept': '*/*',
+      if (_token != null) 'authorization': 'Bearer $_token',
+      'ngrok-skip-browser-warning': 'true',
+    });
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw ApiException(res.statusCode, {
+        'error': 'download_failed',
+        'message': 'Could not download file (HTTP ${res.statusCode}).',
+      });
+    }
+    return res.bodyBytes;
   }
 
   Uri _uri(String path, [Map<String, dynamic>? query]) {

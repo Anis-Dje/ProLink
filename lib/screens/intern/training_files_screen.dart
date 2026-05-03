@@ -105,7 +105,7 @@ class _TrainingFilesScreenState extends State<TrainingFilesScreen>
             label: const Text('Open / Download'),
             onPressed: () {
               Navigator.of(ctx).pop();
-              FileLauncher.open(context, f.fileUrl);
+              FileLauncher.open(context, f.fileUrl, title: f.title);
             },
           ),
         ],

@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../screens/common/file_viewer_screen.dart';
 import 'app_utils.dart';
 
-/// Opens [url] in the device's default external app — browser for web
-/// links, PDF reader for `.pdf`, gallery for images, etc. Surfaces a
-/// snackbar on the [context] if the URL is invalid or no handler is
-/// available so the user gets a clear failure instead of nothing.
+/// Opens [url] inside the app for previewable formats (PDF, images),
+/// falling back to the device's default external app for everything
+/// else (.docx, .xlsx, links, etc.). Surfaces a snackbar on the
+/// [context] when the URL is invalid or no handler is available so
+/// the user gets a clear failure instead of nothing.
 class FileLauncher {
   FileLauncher._();
 
-  static Future<void> open(BuildContext context, String url) async {
+  static Future<void> open(
+    BuildContext context,
+    String url, {
+    String title = 'File',
+  }) async {
     final trimmed = url.trim();
     if (trimmed.isEmpty) {
       AppUtils.showSnackBar(context, 'No file URL attached', isError: true);
@@ -20,6 +26,14 @@ class FileLauncher {
     if (uri == null || !uri.hasScheme) {
       AppUtils.showSnackBar(context, 'Invalid file URL: $trimmed',
           isError: true);
+      return;
+    }
+    if (FileViewerScreen.canPreview(trimmed)) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => FileViewerScreen(url: trimmed, title: title),
+        ),
+      );
       return;
     }
     try {

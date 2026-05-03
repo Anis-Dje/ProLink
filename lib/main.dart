@@ -8,6 +8,7 @@ import 'models/user_model.dart';
 import 'services/api_client.dart';
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
+import 'services/legal_documents_service.dart';
 import 'services/notification_service.dart';
 import 'services/storage_service.dart';
 
@@ -83,6 +84,9 @@ class ProLinkApp extends StatelessWidget {
         ),
         Provider<StorageService>(
           create: (_) => StorageService(apiClient),
+        ),
+        Provider<LegalDocumentsService>(
+          create: (_) => LegalDocumentsService(apiClient),
         ),
       ],
       child: MaterialApp(

@@ -17,15 +17,19 @@ $email = strtolower(trim($body['email'] ?? ''));
 $password = $body['password'] ?? '';
 $fullName = trim($body['fullName'] ?? '');
 $phone = trim($body['phone'] ?? '');
-$studentId = trim($body['studentId'] ?? '');
 $university = trim($body['university'] ?? '');
 $specialization = trim($body['specialization'] ?? '');
 $department = trim($body['department'] ?? '');
 $profilePhotoUrl = trim($body['profilePhotoUrl'] ?? '');
+$acceptedLegal = (bool)($body['acceptedLegal'] ?? false);
 
-if ($email === '' || $password === '' || $fullName === '' || $studentId === '') {
+if ($email === '' || $password === '' || $fullName === '') {
     pro_link_fail(400, 'missing_fields',
-        'email, password, fullName and studentId are required.');
+        'email, password and fullName are required.');
+}
+if (!$acceptedLegal) {
+    pro_link_fail(400, 'legal_not_accepted',
+        'You must accept the Privacy Policy and Terms & Conditions.');
 }
 if (strlen($password) < 6) {
     pro_link_fail(400, 'weak_password', 'Password must be at least 6 characters.');
@@ -58,17 +62,48 @@ try {
     $userRow = $ins->fetch();
     $userId = $userRow['id'];
 
-    // status defaults to 'pending' on the column.
-    $pdo->prepare('INSERT INTO interns
-        (user_id, student_id, university, specialization, department)
-        VALUES (:u, :s, :un, :sp, :d)')
-        ->execute([
-            ':u' => $userId,
-            ':s' => $studentId,
-            ':un' => $university,
-            ':sp' => $specialization,
-            ':d' => $department,
-        ]);
+    // Server generates the canonical student id (STU-YYYY-NNN with the
+    // sequence resetting each year). We retry on UNIQUE collisions in
+    // the unlikely case two registrations race for the same number.
+    //
+    // Each attempt is wrapped in a SAVEPOINT so a UNIQUE-violation
+    // (SQLSTATE 23505) doesn't abort the surrounding transaction —
+    // PostgreSQL would otherwise refuse every subsequent statement
+    // until ROLLBACK, making the retry loop dead code.
+    $year = (int)date('Y');
+    $studentId = null;
+    for ($attempt = 0; $attempt < 5; $attempt++) {
+        $pdo->exec('SAVEPOINT student_id_attempt');
+        try {
+            $gen = $pdo->prepare('SELECT pro_link_next_student_id(:y) AS sid');
+            $gen->execute([':y' => $year]);
+            $candidate = $gen->fetch()['sid'];
+            $pdo->prepare('INSERT INTO interns
+                (user_id, student_id, university, specialization, department)
+                VALUES (:u, :s, :un, :sp, :d)')
+                ->execute([
+                    ':u' => $userId,
+                    ':s' => $candidate,
+                    ':un' => $university,
+                    ':sp' => $specialization,
+                    ':d' => $department,
+                ]);
+            $pdo->exec('RELEASE SAVEPOINT student_id_attempt');
+            $studentId = $candidate;
+            break;
+        } catch (PDOException $e) {
+            $pdo->exec('ROLLBACK TO SAVEPOINT student_id_attempt');
+            if ($e->getCode() !== '23505') {
+                throw $e;
+            }
+            // student_id collision — retry with the next number.
+            usleep(20000);
+        }
+    }
+    if ($studentId === null) {
+        throw new RuntimeException(
+            'Could not allocate a unique student id after 5 attempts.');
+    }
     $pdo->commit();
 } catch (Throwable $e) {
     $pdo->rollBack();
@@ -87,6 +122,7 @@ pro_link_notify_role(
 // No token: the intern must wait for admin approval and then log in.
 pro_link_ok([
     'pending' => true,
+    'studentId' => $studentId,
     'message' => 'Your registration was received and is awaiting admin approval. '
         . 'You will be able to log in as soon as the administrator approves your account.',
     'user' => pro_link_user_to_json($userRow),

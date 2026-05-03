@@ -7,6 +7,7 @@ import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/api_client.dart';
 import '../../widgets/auth/change_password_dialog.dart';
+import '../../widgets/auth/legal_links.dart';
 import '../../widgets/common/loading_overlay.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -182,7 +183,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 _buildForm(),
                 const SizedBox(height: 24),
                 _buildRegisterLink(),
-                const SizedBox(height: 40),
+                const SizedBox(height: 16),
+                LegalDocumentsLoader(
+                  builder: (context, docs) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: LegalLinksLine(
+                      docs: docs,
+                      leadingText: 'By logging in you agree to our ',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
               ],
             ),
               ),
