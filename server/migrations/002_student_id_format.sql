@@ -20,7 +20,8 @@ WITH numbered AS (
 UPDATE interns i
    SET student_id =
         'STU-' || numbered.yr::text || '-' ||
-        LPAD(numbered.rn::text, 3, '0')
+        LPAD(numbered.rn::text,
+             GREATEST(3, LENGTH(numbered.rn::text)), '0')
   FROM numbered
  WHERE i.id = numbered.id;
 
@@ -56,6 +57,11 @@ BEGIN
       INTO next_seq
       FROM interns
      WHERE student_id LIKE prefix || '%';
-    RETURN prefix || LPAD(next_seq::text, 3, '0');
+    -- Pad to at least 3 digits, but allow growth past 999 — LPAD with
+    -- a length shorter than the input would truncate from the right
+    -- and silently produce duplicate ids.
+    RETURN prefix ||
+           LPAD(next_seq::text,
+                GREATEST(3, LENGTH(next_seq::text)), '0');
 END;
 $$ LANGUAGE plpgsql;
