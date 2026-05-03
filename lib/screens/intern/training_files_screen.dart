@@ -6,7 +6,7 @@ import '../../core/utils/app_utils.dart';
 import '../../core/utils/file_launcher.dart';
 import '../../models/training_file_model.dart';
 import '../../services/firestore_service.dart';
-import '../../widgets/common/custom_search_bar.dart';
+import '../../widgets/common/searchable_app_bar.dart';
 
 /// Shows the training catalog (modules + policy documents) available
 /// to the intern with predictive search.
@@ -67,10 +67,6 @@ class _TrainingFilesScreenState extends State<TrainingFilesScreen>
     return list.toList();
   }
 
-  List<String> get _suggestions => _all
-      .expand((f) => [f.title, ...f.tags])
-      .toSet()
-      .toList();
 
   void _open(TrainingFileModel f) {
     showDialog<void>(
@@ -121,8 +117,10 @@ class _TrainingFilesScreenState extends State<TrainingFilesScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Course materials'),
+      appBar: SearchableAppBar(
+        title: 'Course materials',
+        hintText: 'Search by title, tag or description…',
+        onSearchChanged: (q) => setState(() => _query = q),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => Navigator.of(context).pop(),
@@ -140,14 +138,6 @@ class _TrainingFilesScreenState extends State<TrainingFilesScreen>
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: CustomSearchBar(
-              hintText: 'Search documents...',
-              onChanged: (q) => setState(() => _query = q),
-              suggestions: _suggestions,
-            ),
-          ),
           Expanded(
             child: _loading
                 ? const Center(

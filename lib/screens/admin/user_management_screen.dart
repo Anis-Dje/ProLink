@@ -6,8 +6,8 @@ import '../../core/utils/app_utils.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
-import '../../widgets/common/custom_search_bar.dart';
 import '../../widgets/common/loading_overlay.dart';
+import '../../widgets/common/searchable_app_bar.dart';
 
 /// Admin screen for user management: list all users, create new
 /// mentors/admins, enable/disable accounts.
@@ -86,8 +86,10 @@ class _UserManagementScreenState extends State<UserManagementScreen>
       message: 'Processing...',
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(
-          title: const Text('Manage Users'),
+        appBar: SearchableAppBar(
+          title: 'Manage Users',
+          hintText: 'Search by name or email…',
+          onSearchChanged: (q) => setState(() => _query = q),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
             onPressed: () => Navigator.of(context).pop(),
@@ -103,13 +105,6 @@ class _UserManagementScreenState extends State<UserManagementScreen>
         ),
         body: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: CustomSearchBar(
-                hintText: 'Search users...',
-                onChanged: (q) => setState(() => _query = q),
-              ),
-            ),
             Expanded(
               child: _loading
                   ? const Center(

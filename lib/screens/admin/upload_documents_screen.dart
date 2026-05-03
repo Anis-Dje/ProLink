@@ -13,6 +13,7 @@ import '../../services/firestore_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/common/loading_overlay.dart';
+import '../../widgets/common/searchable_app_bar.dart';
 
 /// Admin screen to upload office schedules and policy handbooks.
 class UploadDocumentsScreen extends StatefulWidget {
@@ -27,8 +28,28 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
   late TabController _tabController;
   List<ScheduleModel> _schedules = [];
   List<TrainingFileModel> _policies = [];
+  String _query = '';
   bool _loading = true;
   bool _uploading = false;
+
+  List<ScheduleModel> get _filteredSchedules {
+    if (_query.isEmpty) return _schedules;
+    final q = _query.toLowerCase();
+    return _schedules.where((s) =>
+        s.title.toLowerCase().contains(q) ||
+        s.weekLabel.toLowerCase().contains(q) ||
+        s.description.toLowerCase().contains(q)).toList();
+  }
+
+  List<TrainingFileModel> get _filteredPolicies {
+    if (_query.isEmpty) return _policies;
+    final q = _query.toLowerCase();
+    return _policies.where((p) =>
+        p.title.toLowerCase().contains(q) ||
+        p.description.toLowerCase().contains(q) ||
+        p.fileType.toLowerCase().contains(q) ||
+        p.tags.any((t) => t.toLowerCase().contains(q))).toList();
+  }
 
   @override
   void initState() {
@@ -71,8 +92,10 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
       message: 'Uploading...',
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(
-          title: const Text('Documents & Schedules'),
+        appBar: SearchableAppBar(
+          title: 'Documents & Schedules',
+          hintText: 'Search by title, week or tag…',
+          onSearchChanged: (q) => setState(() => _query = q),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
             onPressed: () => Navigator.of(context).pop(),
@@ -109,10 +132,13 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
   }
 
   Widget _buildScheduleList() {
-    if (_schedules.isEmpty) {
+    final list = _filteredSchedules;
+    if (list.isEmpty) {
       return _EmptyList(
         icon: Icons.schedule_outlined,
-        label: 'No schedule available',
+        label: _schedules.isEmpty
+            ? 'No schedule available'
+            : 'No schedule matches "$_query"',
       );
     }
     return RefreshIndicator(
@@ -120,10 +146,10 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
       color: AppColors.accent,
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
-        itemCount: _schedules.length,
+        itemCount: list.length,
         separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (_, i) {
-          final s = _schedules[i];
+          final s = list[i];
           return _DocumentTile(
             title: s.title,
             subtitle: '${s.weekLabel} · ${AppUtils.formatDate(s.uploadDate)}',
@@ -137,10 +163,13 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
   }
 
   Widget _buildPolicyList() {
-    if (_policies.isEmpty) {
+    final list = _filteredPolicies;
+    if (list.isEmpty) {
       return _EmptyList(
         icon: Icons.description_outlined,
-        label: 'No policy available',
+        label: _policies.isEmpty
+            ? 'No policy available'
+            : 'No policy matches "$_query"',
       );
     }
     return RefreshIndicator(
@@ -148,10 +177,10 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
       color: AppColors.accent,
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
-        itemCount: _policies.length,
+        itemCount: list.length,
         separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (_, i) {
-          final f = _policies[i];
+          final f = list[i];
           return _DocumentTile(
             title: f.title,
             subtitle: '${f.description} · ${AppUtils.formatDate(f.uploadDate)}',

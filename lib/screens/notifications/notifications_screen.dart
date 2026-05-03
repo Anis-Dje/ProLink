@@ -5,6 +5,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_utils.dart';
 import '../../models/notification_model.dart';
 import '../../services/firestore_service.dart';
+import '../../widgets/common/searchable_app_bar.dart';
 
 /// Full-screen list of the current user's notifications.
 class NotificationsScreen extends StatefulWidget {
@@ -16,7 +17,19 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   late Future<List<NotificationModel>> _future;
+  String _query = '';
   bool _markingAll = false;
+
+  List<NotificationModel> _filter(List<NotificationModel> items) {
+    if (_query.trim().isEmpty) return items;
+    final q = _query.toLowerCase();
+    return items
+        .where((n) =>
+            n.title.toLowerCase().contains(q) ||
+            n.body.toLowerCase().contains(q) ||
+            n.type.toLowerCase().contains(q))
+        .toList();
+  }
 
   @override
   void initState() {
@@ -63,8 +76,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Notifications'),
+      appBar: SearchableAppBar(
+        title: 'Notifications',
+        hintText: 'Search by title, message or type…',
+        onSearchChanged: (q) => setState(() => _query = q),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => Navigator.of(context).pop(),
@@ -106,8 +121,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
               ]);
             }
-            final items = snap.data ?? const [];
-            if (items.isEmpty) {
+            final all = snap.data ?? const [];
+            if (all.isEmpty) {
               return ListView(children: const [
                 SizedBox(height: 120),
                 Icon(Icons.notifications_off_outlined,
@@ -117,6 +132,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   child: Text(
                     'No notifications yet.',
                     style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                ),
+              ]);
+            }
+            final items = _filter(all);
+            if (items.isEmpty) {
+              return ListView(children: [
+                const SizedBox(height: 120),
+                const Icon(Icons.search_off,
+                    size: 56, color: AppColors.textSecondary),
+                const SizedBox(height: 12),
+                Center(
+                  child: Text(
+                    'No notifications match "$_query".',
+                    style: const TextStyle(color: AppColors.textSecondary),
                   ),
                 ),
               ]);
