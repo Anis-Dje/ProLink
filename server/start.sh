@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
-# Starts the Pro-Link PHP dev server with the bundled php.ini, which
-# bumps upload_max_filesize / post_max_size / memory_limit so file
-# uploads larger than the stock 2M / 8M defaults work.
+# Starts the Pro-Link PHP dev server.
+#
+# We deliberately do NOT use `-c <our php.ini>` because that fully
+# replaces the system php.ini and drops critical settings the host PHP
+# relies on — most importantly `extension_dir`. Instead we layer our
+# overrides on top of the system php.ini via `-d` flags so whatever
+# the host already has configured (extension_dir, openssl, curl, etc.)
+# keeps working while we still bump upload limits and ensure pdo_pgsql
+# is loaded.
 #
 # Usage:
 #   export DATABASE_URL="postgresql://..."
@@ -18,5 +24,11 @@ if [ -z "${DATABASE_URL:-}" ]; then
 fi
 
 echo "[pro-link] starting dev server on http://0.0.0.0:8081"
-echo "[pro-link] using php.ini: $DIR/php.ini"
-exec php -c "$DIR/php.ini" -S 0.0.0.0:8081 -t "$DIR" "$DIR/router.php"
+exec php \
+    -d upload_max_filesize=50M \
+    -d post_max_size=55M \
+    -d memory_limit=256M \
+    -d max_execution_time=60 \
+    -d max_input_time=60 \
+    -d extension=pdo_pgsql \
+    -S 0.0.0.0:8081 -t "$DIR" "$DIR/router.php"
