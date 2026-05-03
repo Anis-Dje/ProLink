@@ -9,9 +9,9 @@ REM compiled-in default of C:\php\ext (which usually doesn't exist),
 REM and DB-backed endpoints fail with "could not find driver".
 REM
 REM Instead we layer our overrides on top of the system php.ini using
-REM `-d` flags, so the extension_dir / curl / openssl etc. configured
-REM there keep working while we still bump upload limits and ensure
-REM pdo_pgsql is loaded.
+REM `-d` flags, so the extension_dir / curl / openssl / pdo_pgsql /
+REM fileinfo etc. configured there keep working while we still bump
+REM the upload / execution limits.
 REM
 REM Usage from PowerShell:
 REM   $env:DATABASE_URL="postgresql://..."
@@ -33,7 +33,13 @@ php ^
   -d memory_limit=256M ^
   -d max_execution_time=60 ^
   -d max_input_time=60 ^
-  -d extension=pdo_pgsql ^
-  -d extension=fileinfo ^
   -S 0.0.0.0:8081 -t "%~dp0." "%~dp0router.php"
+REM
+REM NOTE: pdo_pgsql / fileinfo aren't passed with -d extension= because
+REM XAMPP's bundled php.ini already loads them, and a duplicate -d
+REM extension load triggers a noisy "Module is already loaded" warning
+REM on every process boot. If you're on a stripped-down PHP that does
+REM NOT auto-load them, uncomment the appropriate `extension=` line in
+REM the host's php.ini once and re-run start.bat — that's the right
+REM place for permanent extension config.
 endlocal

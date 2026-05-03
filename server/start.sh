@@ -5,9 +5,9 @@
 # replaces the system php.ini and drops critical settings the host PHP
 # relies on — most importantly `extension_dir`. Instead we layer our
 # overrides on top of the system php.ini via `-d` flags so whatever
-# the host already has configured (extension_dir, openssl, curl, etc.)
-# keeps working while we still bump upload limits and ensure pdo_pgsql
-# is loaded.
+# the host already has configured (extension_dir, openssl, curl,
+# pdo_pgsql, fileinfo, etc.) keeps working while we still bump the
+# upload / execution limits.
 #
 # Usage:
 #   export DATABASE_URL="postgresql://..."
@@ -30,6 +30,11 @@ exec php \
     -d memory_limit=256M \
     -d max_execution_time=60 \
     -d max_input_time=60 \
-    -d extension=pdo_pgsql \
-    -d extension=fileinfo \
     -S 0.0.0.0:8081 -t "$DIR" "$DIR/router.php"
+# NOTE: pdo_pgsql / fileinfo aren't passed with -d extension= because
+# the host php.ini already loads them on every supported setup
+# (XAMPP, Debian/Ubuntu, macOS Homebrew). A duplicate -d extension=
+# load triggers a noisy "Module is already loaded" warning on every
+# process boot. If you're on a stripped-down PHP that does NOT
+# auto-load them, enable the corresponding `extension=` line in the
+# host's php.ini once and re-run this script.
