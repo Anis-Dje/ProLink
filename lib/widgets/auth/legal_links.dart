@@ -46,7 +46,12 @@ class _LegalDocumentsLoaderState extends State<LegalDocumentsLoader> {
 /// **Privacy Policy** and **Terms & Conditions**." with each phrase
 /// turned into a tappable hyperlink that opens the corresponding PDF
 /// inline via [FileLauncher].
-class LegalLinksLine extends StatelessWidget {
+///
+/// Stateful so we can own the [TapGestureRecognizer] instances
+/// attached to the rich-text spans and dispose them when the widget
+/// leaves the tree (per Flutter's contract — the framework does NOT
+/// dispose recognizers passed to `TextSpan`).
+class LegalLinksLine extends StatefulWidget {
   const LegalLinksLine({
     super.key,
     required this.docs,
@@ -55,6 +60,42 @@ class LegalLinksLine extends StatelessWidget {
 
   final LegalDocuments docs;
   final String leadingText;
+
+  @override
+  State<LegalLinksLine> createState() => _LegalLinksLineState();
+}
+
+class _LegalLinksLineState extends State<LegalLinksLine> {
+  TapGestureRecognizer? _privacyRecognizer;
+  TapGestureRecognizer? _termsRecognizer;
+
+  @override
+  void didUpdateWidget(covariant LegalLinksLine oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Recognizers close over a specific URL/title — recreate them when
+    // the underlying document changes so taps always land on the
+    // current PDF.
+    if (oldWidget.docs.privacy?.fileUrl != widget.docs.privacy?.fileUrl) {
+      _privacyRecognizer?.dispose();
+      _privacyRecognizer = null;
+    }
+    if (oldWidget.docs.terms?.fileUrl != widget.docs.terms?.fileUrl) {
+      _termsRecognizer?.dispose();
+      _termsRecognizer = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _privacyRecognizer?.dispose();
+    _termsRecognizer?.dispose();
+    super.dispose();
+  }
+
+  TapGestureRecognizer _recognizerFor(LegalDocument doc) {
+    return TapGestureRecognizer()
+      ..onTap = () => FileLauncher.open(context, doc.fileUrl, title: doc.title);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,49 +108,49 @@ class LegalLinksLine extends StatelessWidget {
           height: 1.4,
         ),
         children: [
-          TextSpan(text: leadingText),
+          TextSpan(text: widget.leadingText),
           _legalSpan(
-            context,
             label: 'Privacy Policy',
-            doc: docs.privacy,
+            doc: widget.docs.privacy,
+            getRecognizer: () =>
+                _privacyRecognizer ??= _recognizerFor(widget.docs.privacy!),
           ),
           const TextSpan(text: ' and '),
           _legalSpan(
-            context,
             label: 'Terms & Conditions',
-            doc: docs.terms,
+            doc: widget.docs.terms,
+            getRecognizer: () =>
+                _termsRecognizer ??= _recognizerFor(widget.docs.terms!),
           ),
           const TextSpan(text: '.'),
         ],
       ),
     );
   }
-}
 
-InlineSpan _legalSpan(
-  BuildContext context, {
-  required String label,
-  required LegalDocument? doc,
-}) {
-  if (doc == null) {
-    // Admin hasn't uploaded this one yet — render as italic but inert.
+  InlineSpan _legalSpan({
+    required String label,
+    required LegalDocument? doc,
+    required TapGestureRecognizer Function() getRecognizer,
+  }) {
+    if (doc == null) {
+      // Admin hasn't uploaded this one yet — render as italic but inert.
+      return TextSpan(
+        text: label,
+        style: const TextStyle(
+          fontStyle: FontStyle.italic,
+          color: AppColors.textSecondary,
+        ),
+      );
+    }
     return TextSpan(
       text: label,
       style: const TextStyle(
-        fontStyle: FontStyle.italic,
-        color: AppColors.textSecondary,
+        color: AppColors.accent,
+        decoration: TextDecoration.underline,
+        fontWeight: FontWeight.w600,
       ),
+      recognizer: getRecognizer(),
     );
   }
-  return TextSpan(
-    text: label,
-    style: const TextStyle(
-      color: AppColors.accent,
-      decoration: TextDecoration.underline,
-      fontWeight: FontWeight.w600,
-    ),
-    recognizer: TapGestureRecognizer()
-      ..onTap = () =>
-          FileLauncher.open(context, doc.fileUrl, title: doc.title),
-  );
 }

@@ -65,13 +65,19 @@ try {
     // Server generates the canonical student id (STU-YYYY-NNN with the
     // sequence resetting each year). We retry on UNIQUE collisions in
     // the unlikely case two registrations race for the same number.
+    //
+    // Each attempt is wrapped in a SAVEPOINT so a UNIQUE-violation
+    // (SQLSTATE 23505) doesn't abort the surrounding transaction —
+    // PostgreSQL would otherwise refuse every subsequent statement
+    // until ROLLBACK, making the retry loop dead code.
     $year = (int)date('Y');
     $studentId = null;
     for ($attempt = 0; $attempt < 5; $attempt++) {
-        $gen = $pdo->prepare('SELECT pro_link_next_student_id(:y) AS sid');
-        $gen->execute([':y' => $year]);
-        $candidate = $gen->fetch()['sid'];
+        $pdo->exec('SAVEPOINT student_id_attempt');
         try {
+            $gen = $pdo->prepare('SELECT pro_link_next_student_id(:y) AS sid');
+            $gen->execute([':y' => $year]);
+            $candidate = $gen->fetch()['sid'];
             $pdo->prepare('INSERT INTO interns
                 (user_id, student_id, university, specialization, department)
                 VALUES (:u, :s, :un, :sp, :d)')
@@ -82,9 +88,11 @@ try {
                     ':sp' => $specialization,
                     ':d' => $department,
                 ]);
+            $pdo->exec('RELEASE SAVEPOINT student_id_attempt');
             $studentId = $candidate;
             break;
         } catch (PDOException $e) {
+            $pdo->exec('ROLLBACK TO SAVEPOINT student_id_attempt');
             if ($e->getCode() !== '23505') {
                 throw $e;
             }
