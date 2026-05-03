@@ -6,7 +6,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/utils/app_utils.dart';
 import '../../models/intern_model.dart';
 import '../../services/firestore_service.dart';
-import '../../widgets/common/custom_search_bar.dart';
+import '../../widgets/common/searchable_app_bar.dart';
 import '../../widgets/cards/intern_card.dart';
 
 class ManageInternsScreen extends StatefulWidget {
@@ -86,8 +86,13 @@ class _ManageInternsScreenState extends State<ManageInternsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Manage Interns'),
+      appBar: SearchableAppBar(
+        title: 'Manage Interns',
+        hintText: 'Search by name, email, ID or department…',
+        onSearchChanged: (q) {
+          _searchQuery = q.toLowerCase();
+          _applyFilters();
+        },
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => Navigator.of(context).pop(),
@@ -103,16 +108,6 @@ class _ManageInternsScreenState extends State<ManageInternsScreen>
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: CustomSearchBar(
-              hintText: 'Search interns...',
-              onChanged: (q) {
-                _searchQuery = q.toLowerCase();
-                _applyFilters();
-              },
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Row(

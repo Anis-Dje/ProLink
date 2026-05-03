@@ -6,7 +6,7 @@ import '../../models/intern_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/cards/intern_card.dart';
-import '../../widgets/common/custom_search_bar.dart';
+import '../../widgets/common/searchable_app_bar.dart';
 
 /// Lists interns that have been assigned to the currently signed-in mentor.
 class AssignedInternsScreen extends StatefulWidget {
@@ -57,6 +57,7 @@ class _AssignedInternsScreenState extends State<AssignedInternsScreen> {
     return _interns
         .where((i) =>
             i.fullName.toLowerCase().contains(q) ||
+            i.email.toLowerCase().contains(q) ||
             i.studentId.toLowerCase().contains(q) ||
             i.department.toLowerCase().contains(q))
         .toList();
@@ -66,8 +67,10 @@ class _AssignedInternsScreenState extends State<AssignedInternsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('My Interns'),
+      appBar: SearchableAppBar(
+        title: 'My Interns',
+        hintText: 'Search by name, email, ID or department…',
+        onSearchChanged: (q) => setState(() => _query = q),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => Navigator.of(context).pop(),
@@ -75,13 +78,6 @@ class _AssignedInternsScreenState extends State<AssignedInternsScreen> {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: CustomSearchBar(
-              hintText: 'Search...',
-              onChanged: (q) => setState(() => _query = q),
-            ),
-          ),
           Expanded(
             child: _loading
                 ? const Center(

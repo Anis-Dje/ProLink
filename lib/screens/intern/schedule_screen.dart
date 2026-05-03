@@ -7,6 +7,7 @@ import '../../core/utils/app_utils.dart';
 import '../../core/utils/file_launcher.dart';
 import '../../models/schedule_model.dart';
 import '../../services/firestore_service.dart';
+import '../../widgets/common/searchable_app_bar.dart';
 
 /// Lists schedules published by administrators in a calendar view. The
 /// calendar marks the days that have a schedule attached; tapping a day
@@ -20,11 +21,23 @@ class ScheduleScreen extends StatefulWidget {
 
 class _ScheduleScreenState extends State<ScheduleScreen> {
   List<ScheduleModel> _schedules = const [];
+  String _query = '';
   bool _loading = true;
 
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   CalendarFormat _format = CalendarFormat.month;
+
+  bool get _searching => _query.trim().isNotEmpty;
+
+  List<ScheduleModel> get _searchMatches {
+    if (!_searching) return const [];
+    final q = _query.toLowerCase();
+    return _schedules.where((s) =>
+        s.title.toLowerCase().contains(q) ||
+        s.weekLabel.toLowerCase().contains(q) ||
+        s.description.toLowerCase().contains(q)).toList();
+  }
 
   @override
   void initState() {
@@ -108,8 +121,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Schedules'),
+      appBar: SearchableAppBar(
+        title: 'Schedules',
+        hintText: 'Search by title, week or description…',
+        onSearchChanged: (q) => setState(() => _query = q),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => Navigator.of(context).pop(),
@@ -124,14 +139,52 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               color: AppColors.accent,
               child: ListView(
                 padding: const EdgeInsets.all(16),
-                children: [
-                  _buildCalendar(),
-                  const SizedBox(height: 16),
-                  ..._buildSelectedDayList(),
-                ],
+                children: _searching
+                    ? _buildSearchResults()
+                    : [
+                        _buildCalendar(),
+                        const SizedBox(height: 16),
+                        ..._buildSelectedDayList(),
+                      ],
               ),
             ),
     );
+  }
+
+  List<Widget> _buildSearchResults() {
+    final matches = _searchMatches;
+    if (matches.isEmpty) {
+      return [
+        Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              const Icon(Icons.search_off,
+                  color: AppColors.textSecondary, size: 48),
+              const SizedBox(height: 8),
+              Text(
+                'No schedule matches "$_query"',
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      ];
+    }
+    return [
+      Text(
+        '${matches.length} match${matches.length == 1 ? '' : 'es'} for "$_query"',
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      const SizedBox(height: 10),
+      ...matches.map((s) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _ScheduleTile(schedule: s, onOpen: () => _open(s)),
+          )),
+    ];
   }
 
   Widget _buildCalendar() {
