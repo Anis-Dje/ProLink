@@ -83,7 +83,28 @@ $proLinkLog(sprintf('checkpoint: file meta name=%s size=%s tmp_name=%s err=%s',
 // original filename in the `X-Filename` header. We materialise that body
 // to a temp file and then re-enter the same save / response code path
 // the multipart branch uses.
+// Look up X-Filename case-insensitively via getallheaders() — PHP's
+// built-in dev server normalises some headers into $_SERVER inconsistently
+// (and ngrok-free has been observed to mangle case), so we don't trust
+// $_SERVER['HTTP_X_FILENAME'] alone.
 $rawHeader = $_SERVER['HTTP_X_FILENAME'] ?? '';
+if ($rawHeader === '' && function_exists('getallheaders')) {
+    foreach (getallheaders() as $hdrName => $hdrVal) {
+        if (strcasecmp($hdrName, 'X-Filename') === 0) {
+            $rawHeader = (string)$hdrVal;
+            break;
+        }
+    }
+}
+// Also dump the full header list to upload.log so we can audit what
+// PHP actually received in case the header is missing entirely.
+if (function_exists('getallheaders')) {
+    $hdrPairs = [];
+    foreach (getallheaders() as $k => $v) {
+        $hdrPairs[] = $k . '=' . $v;
+    }
+    $proLinkLog('headers: ' . implode(' | ', $hdrPairs));
+}
 if ($rawHeader !== '' && !$looksMultipart) {
     $rawName = basename($rawHeader);
     $tmp = tempnam(sys_get_temp_dir(), 'pro_link_raw_');
