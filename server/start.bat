@@ -9,9 +9,9 @@ REM compiled-in default of C:\php\ext (which usually doesn't exist),
 REM and DB-backed endpoints fail with "could not find driver".
 REM
 REM Instead we layer our overrides on top of the system php.ini using
-REM `-d` flags, so the extension_dir / curl / openssl etc. configured
-REM there keep working while we still bump upload limits and ensure
-REM pdo_pgsql is loaded.
+REM `-d` flags, so the extension_dir / curl / openssl / pdo_pgsql /
+REM fileinfo etc. configured there keep working while we still bump
+REM the upload / execution limits.
 REM
 REM Usage from PowerShell:
 REM   $env:DATABASE_URL="postgresql://..."

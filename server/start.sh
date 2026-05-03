@@ -5,9 +5,9 @@
 # replaces the system php.ini and drops critical settings the host PHP
 # relies on — most importantly `extension_dir`. Instead we layer our
 # overrides on top of the system php.ini via `-d` flags so whatever
-# the host already has configured (extension_dir, openssl, curl, etc.)
-# keeps working while we still bump upload limits and ensure pdo_pgsql
-# is loaded.
+# the host already has configured (extension_dir, openssl, curl,
+# pdo_pgsql, fileinfo, etc.) keeps working while we still bump the
+# upload / execution limits.
 #
 # Usage:
 #   export DATABASE_URL="postgresql://..."
