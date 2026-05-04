@@ -34,7 +34,8 @@ $stmt->execute([
 $row = $stmt->fetch();
 if (!$row) pro_link_fail(404, 'not_found', 'Intern not found.');
 
-$join = $pdo->prepare('SELECT full_name, email, profile_photo_url
+$join = $pdo->prepare('SELECT full_name, email, profile_photo_url,
+                              is_active AS user_is_active
                          FROM users WHERE id = :u');
 $join->execute([':u' => $row['user_id']]);
 $row += $join->fetch();

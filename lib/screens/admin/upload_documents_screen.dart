@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_utils.dart';
+import '../../models/intern_model.dart';
 import '../../models/schedule_model.dart';
 import '../../models/training_file_model.dart';
 import '../../services/auth_service.dart';
@@ -56,6 +57,19 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Honour the {'tab': 'policies'|'schedule'} route argument coming
+    // from the dashboard shortcuts so the admin lands on the right tab.
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map && args['tab'] is String) {
+      final wanted = (args['tab'] as String).toLowerCase();
+      final idx = wanted.startsWith('polic') ? 1 : 0;
+      if (_tabController.index != idx) _tabController.index = idx;
+    }
   }
 
   @override
@@ -301,6 +315,11 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
         await _promptText('Week (e.g. Week 12 – March 2026)');
     if (weekLabel == null || weekLabel.isEmpty) return;
 
+    // Audience scope is mandatory: the admin picks who sees this
+    // schedule. Cancelling the picker aborts the upload.
+    final scope = await _pickScheduleScope();
+    if (scope == null) return;
+
     String url;
     if (source == _UploadSource.url) {
       final pasted = await _promptUrl('Schedule file URL');
@@ -344,6 +363,8 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
         uploadedBy: adminId,
         uploadDate: DateTime.now(),
         weekLabel: weekLabel,
+        scopeType: scope.type,
+        scopeValue: scope.value,
       );
       await context.read<FirestoreService>().createSchedule(schedule);
       // Local notification is a UX polish; the server also fans out a
@@ -494,6 +515,87 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
     return null;
   }
 
+  /// Two-step picker for the schedule audience scope:
+  ///   1. _ScopeChoice: Public / By specialization / Specific intern
+  ///   2. depending on choice 1, prompt for the value (specialization
+  ///      string, or pick an intern from the list).
+  /// Returns null on cancel at any step.
+  Future<_ScheduleScope?> _pickScheduleScope() async {
+    final type = await showDialog<ScheduleScopeType>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Who should see this schedule?'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, ScheduleScopeType.public),
+            child: const ListTile(
+              leading: Icon(Icons.public),
+              title: Text('Everyone (public)'),
+              subtitle: Text('All interns and mentors will see it.'),
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () =>
+                Navigator.pop(ctx, ScheduleScopeType.specialization),
+            child: const ListTile(
+              leading: Icon(Icons.school_outlined),
+              title: Text('By specialization'),
+              subtitle: Text(
+                  'Only interns in the specialization you pick.'),
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, ScheduleScopeType.intern),
+            child: const ListTile(
+              leading: Icon(Icons.person_outline),
+              title: Text('A specific intern'),
+              subtitle: Text('Only that intern will see it.'),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (type == null) return null;
+
+    if (type == ScheduleScopeType.public) {
+      return const _ScheduleScope(ScheduleScopeType.public, '');
+    }
+
+    if (type == ScheduleScopeType.specialization) {
+      // Free-text: matches whatever the intern entered at registration
+      // (e.g. "Software Engineering"). Backend lookup is case-insensitive.
+      final spec = await _promptText('Specialization (e.g. Cybersecurity)');
+      if (spec == null || spec.isEmpty) return null;
+      return _ScheduleScope(ScheduleScopeType.specialization, spec);
+    }
+
+    // intern scope: pick from the active intern list.
+    final interns = await context.read<FirestoreService>().getAllInterns();
+    if (!mounted) return null;
+    final picked = await showDialog<InternModel>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Pick an intern'),
+        children: [
+          for (final i in interns)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(ctx, i),
+              child: ListTile(
+                leading: const Icon(Icons.person),
+                title: Text(i.fullName),
+                subtitle: Text(
+                    '${i.studentId} · ${i.specialization}'),
+              ),
+            ),
+        ],
+      ),
+    );
+    if (picked == null) return null;
+    // Backend keys schedule.scope_value against users.id (the intern's
+    // *user* id, not the intern row id).
+    return _ScheduleScope(ScheduleScopeType.intern, picked.userId);
+  }
+
   Future<String?> _promptText(String label) async {
     final controller = TextEditingController();
     return showDialog<String>(
@@ -585,6 +687,12 @@ class _DocumentTile extends StatelessWidget {
 }
 
 enum _UploadSource { file, url }
+
+class _ScheduleScope {
+  final ScheduleScopeType type;
+  final String value;
+  const _ScheduleScope(this.type, this.value);
+}
 
 class _EmptyList extends StatelessWidget {
   final IconData icon;

@@ -115,8 +115,45 @@ class InternCard extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 6),
-        _StatusBadge(status: intern.status),
+        Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            _StatusBadge(status: intern.status),
+            // An intern whose user account is disabled cannot log in
+            // regardless of intern.status — surface that explicitly so
+            // an admin doesn't think a "disabled" intern is still
+            // active.
+            if (!intern.isActive) const _DisabledBadge(),
+          ],
+        ),
       ],
+    );
+  }
+}
+
+class _DisabledBadge extends StatelessWidget {
+  const _DisabledBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    const color = AppColors.error;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withAlpha(26),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withAlpha(77)),
+      ),
+      child: const Text(
+        'Disabled',
+        style: TextStyle(
+          fontSize: 10,
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }

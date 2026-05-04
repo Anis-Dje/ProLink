@@ -28,7 +28,8 @@ $isActive = (bool)$body['isActive'];
 $stmt = $pdo->prepare('UPDATE users SET is_active = :a
                         WHERE id = :id
                         RETURNING id, email, full_name, phone, role,
-                                  is_active, profile_photo_url, created_at');
+                                  is_active, profile_photo_url, specialization,
+                                  created_at');
 $stmt->bindValue(':a', $isActive, PDO::PARAM_BOOL);
 $stmt->bindValue(':id', $id);
 $stmt->execute();

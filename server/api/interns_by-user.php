@@ -11,7 +11,8 @@ pro_link_current_user($pdo);
 
 $userId = $_GET['id'] ?? '';
 if ($userId === '') pro_link_fail(400, 'missing_id', 'User id required.');
-$stmt = $pdo->prepare('SELECT i.*, u.full_name, u.email, u.profile_photo_url
+$stmt = $pdo->prepare('SELECT i.*, u.full_name, u.email, u.profile_photo_url,
+                              u.is_active AS user_is_active
                          FROM interns i JOIN users u ON u.id = i.user_id
                         WHERE i.user_id = :uid');
 $stmt->execute([':uid' => $userId]);

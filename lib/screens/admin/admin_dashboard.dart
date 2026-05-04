@@ -179,14 +179,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
           value: '${_pendingInterns.length}',
           icon: Icons.hourglass_empty_outlined,
           color: AppColors.warning,
-          onTap: () => Navigator.of(context).pushNamed('/admin/interns'),
+          // Open the manage-interns screen on the Pending tab directly
+          // so the admin lands on the actionable list instead of "All".
+          onTap: () => Navigator.of(context)
+              .pushNamed('/admin/interns', arguments: {'tab': 'pending'}),
         ),
         StatsCard(
-          title: 'Documents',
+          title: 'Policies',
           value: 'Docs',
-          icon: Icons.folder_outlined,
+          icon: Icons.policy_outlined,
           color: AppColors.secondary,
-          onTap: () => Navigator.of(context).pushNamed('/admin/documents'),
+          // Land on the Policies tab of the upload-documents screen.
+          onTap: () => Navigator.of(context)
+              .pushNamed('/admin/documents', arguments: {'tab': 'policies'}),
         ),
       ],
     );
@@ -222,7 +227,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
             _QuickActionCard(
               icon: Icons.schedule_outlined,
               label: 'Schedule',
-              onTap: () => Navigator.of(context).pushNamed('/admin/documents'),
+              onTap: () => Navigator.of(context).pushNamed(
+                  '/admin/documents',
+                  arguments: {'tab': 'schedule'}),
             ),
             _QuickActionCard(
               icon: Icons.folder_outlined,

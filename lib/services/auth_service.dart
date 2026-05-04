@@ -73,12 +73,17 @@ class AuthService extends ChangeNotifier {
 
   /// Admin-only: provision a mentor or admin user. Does not sign the caller in
   /// as the new user.
+  ///
+  /// [specialization] is required when [role] is mentor (so the admin
+  /// can later assign interns by matching specializations); ignored
+  /// for admins.
   Future<UserModel> createMentorOrAdmin({
     required String email,
     required String password,
     required String fullName,
     required String phone,
     required UserRole role,
+    String specialization = '',
   }) async {
     final res = await _api.post('/users/', body: {
       'email': email.trim(),
@@ -86,6 +91,7 @@ class AuthService extends ChangeNotifier {
       'fullName': fullName,
       'phone': phone,
       'role': role.value,
+      'specialization': specialization,
     });
     return UserModel.fromJson((res['user'] as Map).cast<String, dynamic>());
   }

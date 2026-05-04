@@ -16,7 +16,7 @@ if ($email === '' || $password === '') {
 $pdo = pro_link_pdo();
 $stmt = $pdo->prepare('SELECT id, email, password_hash, full_name, phone, role,
                               is_active, must_change_password,
-                              profile_photo_url, created_at
+                              profile_photo_url, specialization, created_at
                          FROM users WHERE email = :e');
 $stmt->execute([':e' => $email]);
 $row = $stmt->fetch();

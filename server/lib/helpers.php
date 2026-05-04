@@ -5,7 +5,7 @@
 function pro_link_bootstrap(): void {
     header('Content-Type: application/json; charset=utf-8');
     header('Access-Control-Allow-Origin: *');
-    header('Access-Control-Allow-Headers: Authorization, Content-Type, X-Filename');
+    header('Access-Control-Allow-Headers: Authorization, Content-Type, X-Filename, Ngrok-Skip-Browser-Warning');
     header('Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS');
     if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
         http_response_code(204);
@@ -80,7 +80,8 @@ function pro_link_current_user(PDO $pdo): array {
         pro_link_fail(401, 'missing_token', 'Authorization Bearer token required.');
     }
     $stmt = $pdo->prepare('SELECT id, email, full_name, phone, role, is_active,
-                                  must_change_password, profile_photo_url, created_at
+                                  must_change_password, profile_photo_url, specialization,
+                                  created_at
                              FROM users WHERE session_token = :t');
     $stmt->execute([':t' => $token]);
     $row = $stmt->fetch();
@@ -113,6 +114,7 @@ function pro_link_user_to_json(array $row): array {
             ? (bool)$row['must_change_password']
             : false,
         'profilePhotoUrl' => $row['profile_photo_url'] ?? null,
+        'specialization' => $row['specialization'] ?? '',
         'createdAt' => pro_link_iso($row['created_at'] ?? null),
     ];
 }
@@ -139,6 +141,12 @@ function pro_link_intern_to_json(array $row): array {
         'fullName' => $row['full_name'] ?? '',
         'email' => $row['email'] ?? '',
         'profilePhotoUrl' => $row['profile_photo_url'] ?? null,
+        // The intern's user-account active flag (joined from users.is_active).
+        // Used by manage-interns to show a "Disabled" badge so admins know
+        // which interns can't log in regardless of intern.status.
+        'isActive' => array_key_exists('user_is_active', $row)
+            ? (bool)$row['user_is_active']
+            : true,
     ];
 }
 

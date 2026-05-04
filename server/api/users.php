@@ -14,7 +14,8 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if ($method === 'GET') {
     $role = $_GET['role'] ?? '';
     $sql = 'SELECT id, email, full_name, phone, role, is_active,
-                   must_change_password, profile_photo_url, created_at
+                   must_change_password, profile_photo_url, specialization,
+                   created_at
               FROM users';
     $params = [];
     if ($role !== '') {
@@ -36,6 +37,10 @@ if ($method === 'POST') {
     $fullName = trim($body['fullName'] ?? '');
     $phone = trim($body['phone'] ?? '');
     $role = $body['role'] ?? '';
+    // Optional for admin accounts; required (and meaningful) for mentors so
+    // they can be matched against an intern's specialization at assignment
+    // time.
+    $specialization = trim((string)($body['specialization'] ?? ''));
     if (!in_array($role, ['admin', 'mentor'], true)) {
         pro_link_fail(400, 'invalid_role',
             'Role must be "admin" or "mentor" on this endpoint.');
@@ -55,16 +60,18 @@ if ($method === 'POST') {
     // Admin-created accounts always get a temporary password — flag the
     // user so the Flutter client forces a password change on first login.
     $ins = $pdo->prepare('INSERT INTO users
-        (email, password_hash, full_name, phone, role, must_change_password)
-        VALUES (:e, :h, :n, :p, :r, TRUE)
+        (email, password_hash, full_name, phone, role, specialization, must_change_password)
+        VALUES (:e, :h, :n, :p, :r, :s, TRUE)
         RETURNING id, email, full_name, phone, role, is_active,
-                  must_change_password, profile_photo_url, created_at');
+                  must_change_password, profile_photo_url, specialization,
+                  created_at');
     $ins->execute([
         ':e' => $email,
         ':h' => password_hash($password, PASSWORD_BCRYPT),
         ':n' => $fullName,
         ':p' => $phone,
         ':r' => $role,
+        ':s' => $specialization,
     ]);
     $newUser = $ins->fetch();
     pro_link_ok(['user' => pro_link_user_to_json($newUser)], 201);

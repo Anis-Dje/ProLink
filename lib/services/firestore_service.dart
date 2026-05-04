@@ -273,6 +273,10 @@ class FirestoreService {
       'description': schedule.description,
       'fileUrl': schedule.fileUrl,
       'weekLabel': schedule.weekLabel,
+      // The admin chooses the audience scope when uploading; the backend
+      // uses these two fields to filter subsequent GET /schedules calls.
+      'scopeType': schedule.scopeType.value,
+      'scopeValue': schedule.scopeValue,
     });
     return ((res['schedule'] as Map).cast<String, dynamic>())['id']
         as String;
