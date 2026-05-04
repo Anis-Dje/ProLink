@@ -166,4 +166,34 @@ if ($method === 'POST') {
     pro_link_ok(['schedule' => $r], 201);
 }
 
-pro_link_fail(405, 'method_not_allowed', 'Use GET or POST.');
+if ($method === 'DELETE') {
+    // /api/schedules/<id> — admin only (admins are the only role that
+    // uploads schedules in the first place).
+    pro_link_require_role($me, 'admin');
+    $id = $_GET['id'] ?? '';
+    if ($id === '') {
+        pro_link_fail(400, 'missing_id', 'Schedule id is required.');
+    }
+
+    $sel = $pdo->prepare('SELECT id, file_url FROM schedules WHERE id = :id');
+    $sel->execute([':id' => $id]);
+    $row = $sel->fetch();
+    if (!$row) {
+        pro_link_fail(404, 'not_found', 'Schedule not found.');
+    }
+
+    $del = $pdo->prepare('DELETE FROM schedules WHERE id = :id');
+    $del->execute([':id' => $id]);
+
+    // Best-effort cleanup of the underlying upload on disk; external
+    // URLs (Drive / YouTube) are left alone.
+    $url = (string)($row['file_url'] ?? '');
+    if (preg_match('#/files/([A-Za-z0-9._-]+)$#', $url, $m)) {
+        $path = __DIR__ . '/../uploads/' . $m[1];
+        if (is_file($path)) @unlink($path);
+    }
+
+    pro_link_ok(['deleted' => $id]);
+}
+
+pro_link_fail(405, 'method_not_allowed', 'Use GET, POST or DELETE.');

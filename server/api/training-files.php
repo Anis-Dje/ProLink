@@ -140,4 +140,44 @@ if ($method === 'POST') {
     pro_link_ok(['trainingFile' => $r], 201);
 }
 
-pro_link_fail(405, 'method_not_allowed', 'Use GET or POST.');
+if ($method === 'DELETE') {
+    // /api/training-files/<id>
+    //   * admin can delete any row
+    //   * mentor can delete only rows they uploaded
+    //   * intern: forbidden
+    pro_link_require_role($me, 'mentor', 'admin');
+    $id = $_GET['id'] ?? '';
+    if ($id === '') {
+        pro_link_fail(400, 'missing_id', 'Training file id is required.');
+    }
+
+    $sel = $pdo->prepare(
+        'SELECT id, file_url, uploaded_by FROM training_files WHERE id = :id');
+    $sel->execute([':id' => $id]);
+    $row = $sel->fetch();
+    if (!$row) {
+        pro_link_fail(404, 'not_found', 'Training file not found.');
+    }
+    if ($me['role'] !== 'admin' && (string)$row['uploaded_by'] !== (string)$me['id']) {
+        // Mentors cannot delete another mentor's (or admin's) materials.
+        pro_link_fail(403, 'forbidden',
+            'You can only delete training materials you uploaded.');
+    }
+
+    $del = $pdo->prepare('DELETE FROM training_files WHERE id = :id');
+    $del->execute([':id' => $id]);
+
+    // Best-effort cleanup of the underlying upload on disk. The
+    // canonical URL shape is /files/<uuid>.<ext>; anything else (eg. an
+    // external Drive / YouTube link the mentor pasted via the URL flow)
+    // is left alone since we don't own that storage.
+    $url = (string)($row['file_url'] ?? '');
+    if (preg_match('#/files/([A-Za-z0-9._-]+)$#', $url, $m)) {
+        $path = __DIR__ . '/../uploads/' . $m[1];
+        if (is_file($path)) @unlink($path);
+    }
+
+    pro_link_ok(['deleted' => $id]);
+}
+
+pro_link_fail(405, 'method_not_allowed', 'Use GET, POST or DELETE.');
