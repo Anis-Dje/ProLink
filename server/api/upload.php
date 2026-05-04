@@ -164,9 +164,20 @@ $dest = __DIR__ . '/../uploads/' . $name;
 if (!is_dir(dirname($dest))) {
     @mkdir(dirname($dest), 0775, true);
 }
-$ok = $looksMultipart
-    ? move_uploaded_file($tmpPath, $dest)
-    : @rename($tmpPath, $dest);
+// For multipart uploads PHP expects move_uploaded_file() (which also
+// validates the source is a real upload tmp file). For raw uploads
+// we synthesised the temp file ourselves, and rename() can fail with
+// EXDEV across filesystems (e.g. /tmp on tmpfs vs the web root on a
+// different mount), so fall back to copy+unlink when rename fails.
+if ($looksMultipart) {
+    $ok = move_uploaded_file($tmpPath, $dest);
+} else {
+    $ok = @rename($tmpPath, $dest);
+    if (!$ok) {
+        $ok = @copy($tmpPath, $dest);
+        if ($ok) @unlink($tmpPath);
+    }
+}
 if (!$ok) {
     @unlink($tmpPath);
     pro_link_fail(500, 'save_failed', 'Could not save uploaded file.');
