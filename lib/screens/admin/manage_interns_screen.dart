@@ -34,6 +34,13 @@ class _ManageInternsScreenState extends State<ManageInternsScreen>
     AppConstants.statusRejected,
   ];
 
+  /// `didChangeDependencies` fires every time an inherited dependency
+  /// changes — including when bottom sheets / dialogs push routes on
+  /// top of this screen. We only want to honour the route's `tab`
+  /// argument once on first build, otherwise the admin's manual tab
+  /// changes get clobbered the moment they open an intern's details.
+  bool _tabArgApplied = false;
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +52,7 @@ class _ManageInternsScreenState extends State<ManageInternsScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_tabArgApplied) return;
     // The dashboard "Pending" stat passes {'tab': 'pending'} here so we
     // can land directly on that tab instead of "All". Apply once after
     // the controller is built; ignore unknown tab names.
@@ -56,6 +64,7 @@ class _ManageInternsScreenState extends State<ManageInternsScreen>
         _tabController.index = idx;
       }
     }
+    _tabArgApplied = true;
   }
 
   @override

@@ -35,9 +35,12 @@ if ($method === 'GET') {
             'SELECT specialization FROM interns WHERE user_id = :u');
         $iStmt->execute([':u' => $me['id']]);
         $spec = (string)($iStmt->fetchColumn() ?: '');
+        // Specialization compare is case-insensitive: the admin types
+        // the value freehand at upload time and may not match the
+        // capitalisation the intern used at registration.
         $where[] = "(s.scope_type = 'public'
                      OR (s.scope_type = 'specialization'
-                         AND s.scope_value = :spec)
+                         AND LOWER(s.scope_value) = LOWER(:spec))
                      OR (s.scope_type = 'intern'
                          AND s.scope_value = :uid))";
         $params[':spec'] = $spec;
@@ -46,10 +49,13 @@ if ($method === 'GET') {
         // Mentors see public schedules + anything scoped to one of
         // their interns or to a specialization shared with one of
         // their interns.
+        // Same case-insensitive specialization compare as the intern
+        // path — must stay symmetric or mentors silently miss schedules
+        // that their interns can see.
         $where[] = "(s.scope_type = 'public'
                      OR (s.scope_type = 'specialization'
-                         AND s.scope_value IN (
-                             SELECT specialization FROM interns
+                         AND LOWER(s.scope_value) IN (
+                             SELECT LOWER(specialization) FROM interns
                               WHERE mentor_id = :me))
                      OR (s.scope_type = 'intern'
                          AND s.scope_value IN (
@@ -124,10 +130,14 @@ if ($method === 'POST') {
     } elseif ($scopeType === 'specialization') {
         // Notify every active intern in that specialization + their
         // mentors (mentors are deduped by ID).
+        // Case-insensitive match keeps the fan-out aligned with the
+        // GET filter — otherwise a schedule could exist that no intern
+        // ever gets notified about even though it shows up in their feed.
         $stmt = $pdo->prepare(
             'SELECT i.user_id, i.mentor_id
                FROM interns i JOIN users u ON u.id = i.user_id
-              WHERE u.is_active = TRUE AND i.specialization = :s');
+              WHERE u.is_active = TRUE
+                AND LOWER(i.specialization) = LOWER(:s)');
         $stmt->execute([':s' => $scopeValue]);
         $mentorSeen = [];
         foreach ($stmt->fetchAll() as $row) {

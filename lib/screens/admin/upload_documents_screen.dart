@@ -33,6 +33,13 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
   bool _loading = true;
   bool _uploading = false;
 
+  /// Single-shot guard so the route's `tab` argument is honoured on
+  /// first build only — dialogs (`_chooseSource`, `_promptText`, the
+  /// scope picker) all push routes that re-trigger
+  /// `didChangeDependencies`, and without this guard the tab would
+  /// snap back to the route argument every time one closes.
+  bool _tabArgApplied = false;
+
   List<ScheduleModel> get _filteredSchedules {
     if (_query.isEmpty) return _schedules;
     final q = _query.toLowerCase();
@@ -62,6 +69,7 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_tabArgApplied) return;
     // Honour the {'tab': 'policies'|'schedule'} route argument coming
     // from the dashboard shortcuts so the admin lands on the right tab.
     final args = ModalRoute.of(context)?.settings.arguments;
@@ -70,6 +78,7 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen>
       final idx = wanted.startsWith('polic') ? 1 : 0;
       if (_tabController.index != idx) _tabController.index = idx;
     }
+    _tabArgApplied = true;
   }
 
   @override
