@@ -36,6 +36,13 @@ if ($method === 'PATCH') {
               'profilePhotoUrl' => 'profile_photo_url',
               'specialization' => 'specialization'] as $api => $col) {
         if (array_key_exists($api, $body)) {
+            // specialization gates mentor↔intern assignment eligibility
+            // (see interns_assign.php + assign_intern_screen.dart). A
+            // mentor self-editing it would let them slip into another
+            // specialization's eligible list, so only admins may set it.
+            if ($col === 'specialization' && $me['role'] !== 'admin') {
+                continue;
+            }
             $sets[] = "$col = :$col";
             $val = $body[$api];
             // Coalesce empty strings to NULL for profile_photo_url so the
