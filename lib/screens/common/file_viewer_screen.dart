@@ -140,7 +140,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
       // Persist under the app's cache so flutter_pdfview can mmap the
       // file (its API takes a path, not bytes).
       final dir = await getTemporaryDirectory();
-      final filename = _safeFilename(kind);
+      final filename = _safeFilename(kind, bytes);
       final path = p.join(dir.path, filename);
       final f = File(path);
       await f.writeAsBytes(bytes, flush: true);
@@ -160,7 +160,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
     }
   }
 
-  String _safeFilename(_ViewerKind kind) {
+  String _safeFilename(_ViewerKind kind, Uint8List bytes) {
     final tail = Uri.parse(widget.url).pathSegments.isEmpty
         ? widget.title
         : Uri.parse(widget.url).pathSegments.last;
@@ -171,7 +171,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
     // app receiving the file) gets the right MIME hint.
     final desiredExt = switch (kind) {
       _ViewerKind.pdf => '.pdf',
-      _ViewerKind.image => _imageExtFromBytes(),
+      _ViewerKind.image => _imageExtFromBytes(bytes),
       _ViewerKind.unsupported => null,
     };
     if (desiredExt != null) {
@@ -183,9 +183,8 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
     return cleaned;
   }
 
-  String _imageExtFromBytes() {
-    final b = _bytes;
-    if (b == null || b.length < 4) return '.img';
+  String _imageExtFromBytes(Uint8List b) {
+    if (b.length < 4) return '.img';
     if (b[0] == 0x89 && b[1] == 0x50) return '.png';
     if (b[0] == 0xFF && b[1] == 0xD8) return '.jpg';
     if (b[0] == 0x47 && b[1] == 0x49) return '.gif';
