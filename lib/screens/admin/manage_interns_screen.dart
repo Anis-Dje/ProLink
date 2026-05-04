@@ -26,12 +26,26 @@ class _ManageInternsScreenState extends State<ManageInternsScreen>
 
   // "Completed" tab was dropped — completion is rare and we found it
   // confused admins (they kept clicking it expecting active interns).
-  final List<String> _tabs = const ['All', 'Active', 'Pending', 'Rejected'];
+  // "Disabled" tab surfaces interns whose user account is deactivated
+  // (`users.is_active = false`) so they don't pollute the Active tab —
+  // a disabled intern can't log in, so listing them as Active was
+  // misleading.
+  final List<String> _tabs = const [
+    'All',
+    'Active',
+    'Pending',
+    'Rejected',
+    'Disabled',
+  ];
+  // Special sentinel for the Disabled tab; we filter on `isActive`
+  // instead of `status` for that one.
+  static const String _disabledFilter = '__disabled__';
   final List<String?> _statusFilters = const [
     null,
     AppConstants.statusActive,
     AppConstants.statusPending,
     AppConstants.statusRejected,
+    _disabledFilter,
   ];
 
   /// `didChangeDependencies` fires every time an inherited dependency
@@ -97,7 +111,17 @@ class _ManageInternsScreenState extends State<ManageInternsScreen>
     final statusFilter = _statusFilters[_tabController.index];
     setState(() {
       _filteredInterns = _allInterns.where((intern) {
-        final matchesStatus = statusFilter == null || intern.status == statusFilter;
+        // Disabled tab: only show interns whose account is deactivated.
+        // Active tab: exclude disabled accounts — a disabled intern
+        // can't log in, so listing them as Active is misleading.
+        final bool matchesStatus;
+        if (statusFilter == _disabledFilter) {
+          matchesStatus = !intern.isActive;
+        } else if (statusFilter == AppConstants.statusActive) {
+          matchesStatus = intern.status == statusFilter && intern.isActive;
+        } else {
+          matchesStatus = statusFilter == null || intern.status == statusFilter;
+        }
         final matchesSearch = _searchQuery.isEmpty ||
             intern.fullName.toLowerCase().contains(_searchQuery) ||
             intern.studentId.toLowerCase().contains(_searchQuery) ||

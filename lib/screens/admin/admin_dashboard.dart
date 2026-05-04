@@ -46,7 +46,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
           _currentUser = user;
           _pendingInterns = pending.take(5).toList();
           _totalInterns = allInterns.length;
-          _activeInterns = allInterns.where((i) => i.status == 'active').length;
+          // A disabled intern can't log in, so they shouldn't be
+          // counted as Active here either (matches the Active tab
+          // filter in manage_interns_screen).
+          _activeInterns = allInterns
+              .where((i) => i.status == 'active' && i.isActive)
+              .length;
           _loading = false;
         });
       }
@@ -232,9 +237,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   arguments: {'tab': 'schedule'}),
             ),
             _QuickActionCard(
-              icon: Icons.folder_outlined,
-              label: 'Documents',
-              onTap: () => Navigator.of(context).pushNamed('/admin/documents'),
+              icon: Icons.policy_outlined,
+              label: 'Policies',
+              // Land directly on the Policies tab so admins reach the
+              // policy library in one tap, not the schedule list.
+              onTap: () => Navigator.of(context).pushNamed(
+                  '/admin/documents',
+                  arguments: {'tab': 'policies'}),
             ),
             _QuickActionCard(
               icon: Icons.manage_accounts_outlined,
