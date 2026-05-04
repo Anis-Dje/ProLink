@@ -28,7 +28,15 @@ class FileLauncher {
           isError: true);
       return;
     }
-    if (FileViewerScreen.canPreview(trimmed)) {
+    // Always route uploads served by our own backend through the
+    // in-app viewer. The viewer downloads the bytes, sniffs the magic
+    // header, and either renders inline (PDF / images) or shows a
+    // "Download / Open externally" fallback. This is critical for
+    // legacy uploads saved as `.bin` (when the client filename
+    // derivation didn't include an extension): the URL extension lies
+    // about the type, but the bytes don't.
+    final isOurFile = uri.path.contains('/files/');
+    if (isOurFile || FileViewerScreen.canPreview(trimmed)) {
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => FileViewerScreen(url: trimmed, title: title),
