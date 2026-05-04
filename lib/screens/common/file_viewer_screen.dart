@@ -36,9 +36,14 @@ class FileViewerScreen extends StatefulWidget {
   final String url;
   final String title;
 
-  /// Returns true when [url]'s extension is one we can render inline.
+  /// Heuristic, URL-only check used by callers that want to decide
+  /// whether to push the in-app viewer at all (vs. an external
+  /// launcher) before any bytes have been downloaded. The viewer
+  /// itself does a far more accurate magic-byte sniff post-download,
+  /// so any URL is safe to push — for files we can't preview, the
+  /// viewer renders an "open externally" fallback.
   static bool canPreview(String url) =>
-      _kindFor(url) != _ViewerKind.unsupported;
+      _kindFromUrl(url) != _ViewerKind.unsupported;
 
   @override
   State<FileViewerScreen> createState() => _FileViewerScreenState();
@@ -46,7 +51,7 @@ class FileViewerScreen extends StatefulWidget {
 
 enum _ViewerKind { pdf, image, unsupported }
 
-_ViewerKind _kindFor(String url) {
+_ViewerKind _kindFromUrl(String url) {
   final lower = url.toLowerCase();
   // Strip query / fragment so `.pdf?foo=bar` still matches.
   final clean =
@@ -65,8 +70,46 @@ _ViewerKind _kindFor(String url) {
   return _ViewerKind.unsupported;
 }
 
+/// Magic-byte sniffer. Mirrors `pro_link_sniff_extension` on the
+/// server. Used to recover from old uploads that were saved as
+/// `.bin` (back when filename derivation on the client could lose
+/// the extension): even if the URL is `<uuid>.bin`, if the bytes
+/// start with `%PDF-` we render it as a PDF.
+_ViewerKind _kindFromBytes(Uint8List b) {
+  if (b.length >= 5 &&
+      b[0] == 0x25 && b[1] == 0x50 &&
+      b[2] == 0x44 && b[3] == 0x46 && b[4] == 0x2D) {
+    return _ViewerKind.pdf;
+  }
+  if (b.length >= 8 &&
+      b[0] == 0x89 && b[1] == 0x50 && b[2] == 0x4E && b[3] == 0x47) {
+    return _ViewerKind.image;
+  }
+  if (b.length >= 3 && b[0] == 0xFF && b[1] == 0xD8 && b[2] == 0xFF) {
+    return _ViewerKind.image;
+  }
+  if (b.length >= 6 &&
+      b[0] == 0x47 && b[1] == 0x49 && b[2] == 0x46 &&
+      b[3] == 0x38 && (b[4] == 0x37 || b[4] == 0x39) && b[5] == 0x61) {
+    return _ViewerKind.image;
+  }
+  if (b.length >= 12 &&
+      b[0] == 0x52 && b[1] == 0x49 && b[2] == 0x46 && b[3] == 0x46 &&
+      b[8] == 0x57 && b[9] == 0x45 && b[10] == 0x42 && b[11] == 0x50) {
+    return _ViewerKind.image;
+  }
+  if (b.length >= 2 && b[0] == 0x42 && b[1] == 0x4D) {
+    return _ViewerKind.image;
+  }
+  return _ViewerKind.unsupported;
+}
+
 class _FileViewerScreenState extends State<FileViewerScreen> {
-  late final _ViewerKind _kind = _kindFor(widget.url);
+  // Initial guess from the URL, refined to the magic-byte answer once
+  // the bytes have downloaded. The URL guess is used only to pick the
+  // right loading skeleton; the post-download value is what actually
+  // drives the renderer.
+  _ViewerKind _kind = _ViewerKind.unsupported;
 
   bool _loading = true;
   Object? _error;
@@ -76,6 +119,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
   @override
   void initState() {
     super.initState();
+    _kind = _kindFromUrl(widget.url);
     _download();
   }
 
@@ -88,10 +132,15 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
       final api = context.read<ApiClient>();
       final raw = await api.downloadBytes(widget.url);
       final bytes = Uint8List.fromList(raw);
+      // Pick the actual viewer from the bytes — the URL extension
+      // can be wrong (e.g. legacy `.bin` uploads from when the
+      // client filename derivation didn't sniff types).
+      final detected = _kindFromBytes(bytes);
+      final kind = detected != _ViewerKind.unsupported ? detected : _kind;
       // Persist under the app's cache so flutter_pdfview can mmap the
       // file (its API takes a path, not bytes).
       final dir = await getTemporaryDirectory();
-      final filename = _safeFilename();
+      final filename = _safeFilename(kind);
       final path = p.join(dir.path, filename);
       final f = File(path);
       await f.writeAsBytes(bytes, flush: true);
@@ -99,6 +148,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
       setState(() {
         _bytes = bytes;
         _localPath = path;
+        _kind = kind;
         _loading = false;
       });
     } catch (e) {
@@ -110,12 +160,38 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
     }
   }
 
-  String _safeFilename() {
+  String _safeFilename(_ViewerKind kind) {
     final tail = Uri.parse(widget.url).pathSegments.isEmpty
         ? widget.title
         : Uri.parse(widget.url).pathSegments.last;
-    final cleaned = tail.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-    return cleaned.isEmpty ? 'file' : cleaned;
+    var cleaned = tail.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+    if (cleaned.isEmpty) cleaned = 'file';
+    // If the URL ends in `.bin` but the bytes are actually a PDF /
+    // image, swap the extension so the system share sheet (and any
+    // app receiving the file) gets the right MIME hint.
+    final desiredExt = switch (kind) {
+      _ViewerKind.pdf => '.pdf',
+      _ViewerKind.image => _imageExtFromBytes(),
+      _ViewerKind.unsupported => null,
+    };
+    if (desiredExt != null) {
+      final base = cleaned.contains('.')
+          ? cleaned.substring(0, cleaned.lastIndexOf('.'))
+          : cleaned;
+      cleaned = '$base$desiredExt';
+    }
+    return cleaned;
+  }
+
+  String _imageExtFromBytes() {
+    final b = _bytes;
+    if (b == null || b.length < 4) return '.img';
+    if (b[0] == 0x89 && b[1] == 0x50) return '.png';
+    if (b[0] == 0xFF && b[1] == 0xD8) return '.jpg';
+    if (b[0] == 0x47 && b[1] == 0x49) return '.gif';
+    if (b[0] == 0x52 && b[1] == 0x49) return '.webp';
+    if (b[0] == 0x42 && b[1] == 0x4D) return '.bmp';
+    return '.img';
   }
 
   Future<void> _share() async {
@@ -173,12 +249,6 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
   }
 
   Widget _buildBody() {
-    if (_kind == _ViewerKind.unsupported) {
-      return _UnsupportedView(
-        title: widget.title,
-        onOpenExternal: _openExternally,
-      );
-    }
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -208,16 +278,25 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
           maxScale: PhotoViewComputedScale.covered * 4,
         );
       case _ViewerKind.unsupported:
-        return const SizedBox.shrink();
+        return _UnsupportedView(
+          title: widget.title,
+          onOpenExternal: _openExternally,
+          onShare: _localPath == null ? null : _share,
+        );
     }
   }
 }
 
 class _UnsupportedView extends StatelessWidget {
-  const _UnsupportedView({required this.title, required this.onOpenExternal});
+  const _UnsupportedView({
+    required this.title,
+    required this.onOpenExternal,
+    this.onShare,
+  });
 
   final String title;
   final VoidCallback onOpenExternal;
+  final VoidCallback? onShare;
 
   @override
   Widget build(BuildContext context) {
@@ -242,15 +321,28 @@ class _UnsupportedView extends StatelessWidget {
             const SizedBox(height: 12),
             const Text(
               'This file format isn\u2019t previewed in the app. '
-              'Open it in another app to view.',
+              'Download it or open it in another app to view.',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 24),
-            FilledButton.icon(
-              icon: const Icon(Icons.open_in_new),
-              label: const Text('Open externally'),
-              onPressed: onOpenExternal,
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              alignment: WrapAlignment.center,
+              children: [
+                if (onShare != null)
+                  FilledButton.icon(
+                    icon: const Icon(Icons.download_outlined),
+                    label: const Text('Download'),
+                    onPressed: onShare,
+                  ),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('Open externally'),
+                  onPressed: onOpenExternal,
+                ),
+              ],
             ),
           ],
         ),

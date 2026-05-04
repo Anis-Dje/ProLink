@@ -124,23 +124,156 @@ class ApiClient {
     return _decode(res);
   }
 
-  /// Multipart upload. Returns the public file URL served by PHP at
-  /// `/files/<name>`. Works on both mobile (file system path) and web
-  /// (only bytes available) by reading the file through `XFile`.
+  /// Uploads [file] and returns the public URL the server serves it
+  /// from (`/files/<uuid>.<ext>`).
+  ///
+  /// Sent as a raw `application/octet-stream` body with the filename
+  /// in BOTH an `X-Filename` header AND a `?filename=` query string —
+  /// some HTTP middleware (including ngrok-free, which this project
+  /// uses for mobile testing) drops or mangles `multipart/form-data`
+  /// boundaries containing certain characters, so the multipart parser
+  /// on PHP's end ends up with `$_FILES[file][name] = ''` and a
+  /// useless `UPLOAD_ERR_NO_FILE`. Bypassing multipart entirely
+  /// eliminates that whole class of bugs.
+  ///
+  /// Server-side, we ALSO sniff the magic bytes of the body, so even
+  /// if the filename ends up missing or extension-less the saved file
+  /// will still get the correct extension based on its real type.
   Future<String> uploadFile(XFile file, {String fieldName = 'file'}) async {
     final bytes = await file.readAsBytes();
-    final filename = p.basename(file.path.isEmpty ? file.name : file.path);
-    final req = http.MultipartRequest('POST', _uri('/upload/'))
-      ..headers.addAll(_headers(json: false))
-      ..files.add(http.MultipartFile.fromBytes(
-        fieldName,
-        bytes,
-        filename: filename,
-      ));
-    final streamed = await req.send();
-    final res = await http.Response.fromStream(streamed);
+    final filename = _deriveFilename(file, bytes);
+    final uri = _uri('/upload/', {'filename': filename});
+    final headers = _headers(json: false)
+      ..['content-type'] = 'application/octet-stream'
+      ..['x-filename'] = filename;
+    if (kDebugMode) {
+      debugPrint('[ApiClient] UPLOAD $uri name=$filename bytes=${bytes.length}');
+    }
+    final res = await http.post(uri, headers: headers, body: bytes);
     final body = _decode(res);
     return body['url'] as String;
+  }
+
+  /// Best-effort filename for the upload.
+  ///
+  /// Source of truth ranking:
+  ///   1. `XFile.name` if it has an extension (file_picker normally
+  ///      gives this).
+  ///   2. `basename(XFile.path)` if `name` is missing or extensionless
+  ///      and the path has a real extension.
+  ///   3. The MIME-derived extension from `XFile.mimeType` glued onto
+  ///      whichever stem we have (e.g. `application/pdf` → `.pdf`).
+  ///   4. Magic-byte sniff of the first few bytes — bullet-proof
+  ///      against pickers that return nothing usable on some Android
+  ///      builds.
+  ///   5. `upload_<ts>.bin` as the absolute last resort. The server
+  ///      sniffs the body too, so even this still saves with the
+  ///      right extension on disk.
+  String _deriveFilename(XFile file, Uint8List bytes) {
+    String stem = '';
+    String ext = '';
+
+    if (file.name.isNotEmpty) {
+      final n = p.basename(file.name);
+      stem = p.basenameWithoutExtension(n);
+      ext = p.extension(n).replaceFirst('.', '').toLowerCase();
+    }
+    if ((stem.isEmpty || ext.isEmpty) && file.path.isNotEmpty) {
+      final n = p.basename(file.path);
+      if (stem.isEmpty) stem = p.basenameWithoutExtension(n);
+      if (ext.isEmpty) {
+        ext = p.extension(n).replaceFirst('.', '').toLowerCase();
+      }
+    }
+    if (ext.isEmpty && file.mimeType != null && file.mimeType!.isNotEmpty) {
+      ext = _extForMime(file.mimeType!) ?? '';
+    }
+    if (ext.isEmpty) {
+      ext = _sniffExt(bytes) ?? '';
+    }
+    if (stem.isEmpty) {
+      stem = 'upload_${DateTime.now().millisecondsSinceEpoch}';
+    }
+    if (ext.isEmpty) {
+      ext = 'bin';
+    }
+    return '$stem.$ext';
+  }
+
+  /// Maps a MIME type to a canonical lower-case extension (no dot).
+  /// Keep in sync with the server-side mime map in router.php.
+  String? _extForMime(String mime) {
+    switch (mime.toLowerCase().split(';').first.trim()) {
+      case 'application/pdf':
+        return 'pdf';
+      case 'image/png':
+        return 'png';
+      case 'image/jpeg':
+      case 'image/jpg':
+        return 'jpg';
+      case 'image/gif':
+        return 'gif';
+      case 'image/webp':
+        return 'webp';
+      case 'image/bmp':
+        return 'bmp';
+      case 'application/msword':
+        return 'doc';
+      case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        return 'docx';
+      case 'application/vnd.ms-excel':
+        return 'xls';
+      case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+        return 'xlsx';
+      case 'application/vnd.ms-powerpoint':
+        return 'ppt';
+      case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+        return 'pptx';
+      case 'application/zip':
+        return 'zip';
+      case 'text/plain':
+        return 'txt';
+      case 'text/csv':
+        return 'csv';
+    }
+    return null;
+  }
+
+  /// Quick magic-byte sniffer; mirrors `pro_link_sniff_extension` on
+  /// the server so client-derived names line up with what the server
+  /// would pick if it had to fall back.
+  String? _sniffExt(Uint8List bytes) {
+    if (bytes.length >= 5 &&
+        bytes[0] == 0x25 && bytes[1] == 0x50 &&
+        bytes[2] == 0x44 && bytes[3] == 0x46 && bytes[4] == 0x2D) {
+      return 'pdf';
+    }
+    if (bytes.length >= 8 &&
+        bytes[0] == 0x89 && bytes[1] == 0x50 &&
+        bytes[2] == 0x4E && bytes[3] == 0x47) {
+      return 'png';
+    }
+    if (bytes.length >= 3 &&
+        bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) {
+      return 'jpg';
+    }
+    if (bytes.length >= 6 &&
+        bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46 &&
+        bytes[3] == 0x38 &&
+        (bytes[4] == 0x37 || bytes[4] == 0x39) && bytes[5] == 0x61) {
+      return 'gif';
+    }
+    if (bytes.length >= 12 &&
+        bytes[0] == 0x52 && bytes[1] == 0x49 &&
+        bytes[2] == 0x46 && bytes[3] == 0x46 &&
+        bytes[8] == 0x57 && bytes[9] == 0x45 &&
+        bytes[10] == 0x42 && bytes[11] == 0x50) {
+      return 'webp';
+    }
+    if (bytes.length >= 2 && bytes[0] == 0x42 && bytes[1] == 0x4D) {
+      return 'bmp';
+    }
+    return null;
   }
 
   Map<String, dynamic> _decode(http.Response res) {
