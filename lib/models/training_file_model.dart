@@ -9,6 +9,11 @@ class TrainingFileModel {
   final String? departmentId;
   final List<String> tags;
 
+  /// True when this file was uploaded by an admin (policies, general
+  /// resources). Admin uploads are visible to every intern regardless
+  /// of mentor; mentor uploads are scoped to that mentor's interns.
+  final bool isAdminUploaded;
+
   const TrainingFileModel({
     required this.id,
     required this.title,
@@ -19,6 +24,7 @@ class TrainingFileModel {
     required this.uploadDate,
     this.departmentId,
     required this.tags,
+    this.isAdminUploaded = false,
   });
 
   factory TrainingFileModel.fromJson(Map<String, dynamic> json) {
@@ -34,6 +40,7 @@ class TrainingFileModel {
           DateTime.now(),
       departmentId: json['departmentId'] as String?,
       tags: rawTags.map((e) => e.toString()).toList(),
+      isAdminUploaded: json['isAdminUploaded'] as bool? ?? false,
     );
   }
 
@@ -47,5 +54,6 @@ class TrainingFileModel {
         'uploadDate': uploadDate.toUtc().toIso8601String(),
         'departmentId': departmentId,
         'tags': tags,
+        'isAdminUploaded': isAdminUploaded,
       };
 }

@@ -16,7 +16,11 @@ pro_link_current_user($pdo);
 // prevents stale rows (e.g. a user whose role was later changed to
 // "mentor" / "admin" but whose interns row was kept) from leaking into
 // the admin "interns" lists.
-$sql = 'SELECT i.*, u.full_name, u.email, u.profile_photo_url
+// We expose users.is_active as user_is_active so manage-interns can
+// surface a "Disabled" badge — interns whose user account is disabled
+// can't log in regardless of their internship status.
+$sql = 'SELECT i.*, u.full_name, u.email, u.profile_photo_url,
+               u.is_active AS user_is_active
           FROM interns i JOIN users u ON u.id = i.user_id';
 $where = ["u.role = 'intern'"];
 $params = [];

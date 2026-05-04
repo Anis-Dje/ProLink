@@ -16,6 +16,13 @@ class InternModel {
   final String specialization;
   final String? rejectionReason;
 
+  /// Whether the intern's *user account* is active (mirrors
+  /// `users.is_active`). Distinct from [status], which tracks the
+  /// internship's own pending/active/rejected/completed lifecycle.
+  /// An intern whose account is disabled cannot log in regardless of
+  /// [status], so manage-interns surfaces this as a separate badge.
+  final bool isActive;
+
   const InternModel({
     required this.id,
     required this.userId,
@@ -33,6 +40,7 @@ class InternModel {
     required this.university,
     required this.specialization,
     this.rejectionReason,
+    this.isActive = true,
   });
 
   factory InternModel.fromJson(Map<String, dynamic> json) {
@@ -56,6 +64,7 @@ class InternModel {
       university: json['university'] as String? ?? '',
       specialization: json['specialization'] as String? ?? '',
       rejectionReason: json['rejectionReason'] as String?,
+      isActive: json['isActive'] as bool? ?? true,
     );
   }
 
@@ -76,6 +85,7 @@ class InternModel {
         'university': university,
         'specialization': specialization,
         'rejectionReason': rejectionReason,
+        'isActive': isActive,
       };
 
   InternModel copyWith({
@@ -95,6 +105,7 @@ class InternModel {
     String? university,
     String? specialization,
     String? rejectionReason,
+    bool? isActive,
   }) {
     return InternModel(
       id: id ?? this.id,
@@ -113,6 +124,7 @@ class InternModel {
       university: university ?? this.university,
       specialization: specialization ?? this.specialization,
       rejectionReason: rejectionReason ?? this.rejectionReason,
+      isActive: isActive ?? this.isActive,
     );
   }
 }

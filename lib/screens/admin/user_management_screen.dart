@@ -185,6 +185,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
             fullName: result.fullName,
             phone: result.phone,
             role: result.role,
+            specialization: result.specialization,
           );
       if (mounted) {
         AppUtils.showSnackBar(context, 'Account created');
@@ -334,12 +335,14 @@ class _NewUser {
   final String phone;
   final String password;
   final UserRole role;
+  final String specialization;
   _NewUser({
     required this.fullName,
     required this.email,
     required this.phone,
     required this.password,
     required this.role,
+    required this.specialization,
   });
 }
 
@@ -356,6 +359,7 @@ class _CreateUserSheetState extends State<_CreateUserSheet> {
   final _email = TextEditingController();
   final _phone = TextEditingController();
   final _password = TextEditingController();
+  final _specialization = TextEditingController();
   UserRole _role = UserRole.mentor;
 
   @override
@@ -364,6 +368,7 @@ class _CreateUserSheetState extends State<_CreateUserSheet> {
     _email.dispose();
     _phone.dispose();
     _password.dispose();
+    _specialization.dispose();
     super.dispose();
   }
 
@@ -452,6 +457,21 @@ class _CreateUserSheetState extends State<_CreateUserSheet> {
                 validator: (v) =>
                     (v == null || v.length < 6) ? 'Min 6 characters' : null,
               ),
+              if (_role == UserRole.mentor) ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _specialization,
+                  decoration: const InputDecoration(
+                      labelText: 'Specialization',
+                      helperText:
+                          'Must match interns the mentor will be paired with.',
+                      prefixIcon: Icon(Icons.book_outlined)),
+                  validator: (v) => _role == UserRole.mentor &&
+                          (v == null || v.trim().isEmpty)
+                      ? 'Required for mentors'
+                      : null,
+                ),
+              ],
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: () {
@@ -464,6 +484,10 @@ class _CreateUserSheetState extends State<_CreateUserSheet> {
                       phone: _phone.text.trim(),
                       password: _password.text,
                       role: _role,
+                      specialization:
+                          _role == UserRole.mentor
+                              ? _specialization.text.trim()
+                              : '',
                     ),
                   );
                 },

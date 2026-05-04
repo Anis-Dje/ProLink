@@ -50,7 +50,8 @@ try {
         (email, password_hash, full_name, phone, role, profile_photo_url)
         VALUES (:e, :h, :n, :p, :r, :u)
         RETURNING id, email, full_name, phone, role, is_active,
-                  must_change_password, profile_photo_url, created_at');
+                  must_change_password, profile_photo_url, specialization,
+                  created_at');
     $ins->execute([
         ':e' => $email,
         ':h' => $hash,

@@ -50,6 +50,23 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
     }
   }
 
+  /// Mentors are filtered down to those whose [UserModel.specialization]
+  /// matches the currently selected intern. The 1-to-N rule (each intern
+  /// has exactly one mentor in their specialization) is also enforced
+  /// server-side in `interns_assign.php`; the dropdown filter is the
+  /// UI half of that contract.
+  List<UserModel> get _eligibleMentors {
+    final intern = _selectedIntern;
+    if (intern == null) return const [];
+    final spec = intern.specialization.trim().toLowerCase();
+    if (spec.isEmpty) return const [];
+    return _mentors
+        .where((m) =>
+            m.isActive &&
+            m.specialization.trim().toLowerCase() == spec)
+        .toList();
+  }
+
   List<InternModel> get _filteredInterns {
     if (_searchIntern.isEmpty) return _interns;
     return _interns.where((i) =>
@@ -154,7 +171,15 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
                                   trailing: selected
                                       ? const Icon(Icons.check_circle, color: AppColors.accent)
                                       : null,
-                                  onTap: () => setState(() => _selectedIntern = intern),
+                                  onTap: () => setState(() {
+                                    _selectedIntern = intern;
+                                    // Specialization changes whenever a
+                                    // different intern is picked — clear
+                                    // any previous mentor choice so the
+                                    // dropdown can't show a now-invalid
+                                    // selection.
+                                    _selectedMentor = null;
+                                  }),
                                 );
                               },
                             ),
@@ -166,20 +191,54 @@ class _AssignInternScreenState extends State<AssignInternScreen> {
                     _SectionCard(
                       title: 'Select a Mentor',
                       icon: Icons.supervisor_account_outlined,
-                      child: DropdownButtonFormField<UserModel>(
-                        initialValue: _selectedMentor,
-                        style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins'),
-                        dropdownColor: AppColors.surface,
-                        decoration: const InputDecoration(
-                          hintText: 'Choose a mentor',
-                          prefixIcon: Icon(Icons.person_search_outlined),
-                        ),
-                        items: _mentors.map((m) => DropdownMenuItem(
-                              value: m,
-                              child: Text(m.fullName, overflow: TextOverflow.ellipsis),
-                            )).toList(),
-                        onChanged: (v) => setState(() => _selectedMentor = v),
-                      ),
+                      child: Builder(builder: (_) {
+                        final eligible = _eligibleMentors;
+                        if (_selectedIntern == null) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'Pick an intern first to filter mentors by specialization.',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary),
+                            ),
+                          );
+                        }
+                        if (eligible.isEmpty) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'No mentor available in "${_selectedIntern!.specialization}". '
+                              'Create a mentor with this specialization first.',
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.warning),
+                            ),
+                          );
+                        }
+                        return DropdownButtonFormField<UserModel>(
+                          initialValue: _selectedMentor,
+                          style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontFamily: 'Poppins'),
+                          dropdownColor: AppColors.surface,
+                          decoration: InputDecoration(
+                            hintText:
+                                'Choose a mentor (${_selectedIntern!.specialization})',
+                            prefixIcon:
+                                const Icon(Icons.person_search_outlined),
+                          ),
+                          items: eligible
+                              .map((m) => DropdownMenuItem(
+                                    value: m,
+                                    child: Text(m.fullName,
+                                        overflow: TextOverflow.ellipsis),
+                                  ))
+                              .toList(),
+                          onChanged: (v) =>
+                              setState(() => _selectedMentor = v),
+                        );
+                      }),
                     ),
                     const SizedBox(height: 16),
                     _SectionCard(

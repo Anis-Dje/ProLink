@@ -16,7 +16,7 @@ if ($id === '') {
 
 if ($method === 'GET') {
     $stmt = $pdo->prepare('SELECT id, email, full_name, phone, role, is_active,
-                                  profile_photo_url, created_at
+                                  profile_photo_url, specialization, created_at
                              FROM users WHERE id = :id');
     $stmt->execute([':id' => $id]);
     $row = $stmt->fetch();
@@ -33,8 +33,16 @@ if ($method === 'PATCH') {
     $params = [':id' => $id];
     foreach (['fullName' => 'full_name',
               'phone' => 'phone',
-              'profilePhotoUrl' => 'profile_photo_url'] as $api => $col) {
+              'profilePhotoUrl' => 'profile_photo_url',
+              'specialization' => 'specialization'] as $api => $col) {
         if (array_key_exists($api, $body)) {
+            // specialization gates mentor↔intern assignment eligibility
+            // (see interns_assign.php + assign_intern_screen.dart). A
+            // mentor self-editing it would let them slip into another
+            // specialization's eligible list, so only admins may set it.
+            if ($col === 'specialization' && $me['role'] !== 'admin') {
+                continue;
+            }
             $sets[] = "$col = :$col";
             $val = $body[$api];
             // Coalesce empty strings to NULL for profile_photo_url so the
@@ -49,7 +57,7 @@ if ($method === 'PATCH') {
     $sql = 'UPDATE users SET ' . implode(', ', $sets) .
         ' WHERE id = :id
            RETURNING id, email, full_name, phone, role, is_active,
-                     profile_photo_url, created_at';
+                     profile_photo_url, specialization, created_at';
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $row = $stmt->fetch();

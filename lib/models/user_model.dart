@@ -35,6 +35,12 @@ class UserModel {
   final DateTime createdAt;
   final bool isActive;
 
+  /// Free-form professional specialization (e.g. "Software Engineering",
+  /// "Cybersecurity"). Reused for both mentors and admins; for mentors
+  /// it is the field the assignment screen uses to filter the eligible
+  /// mentor pool against an intern's own specialization.
+  final String specialization;
+
   /// True when the user must change their password before being allowed
   /// to use the rest of the app — set when an admin provisions a mentor /
   /// admin account with a temporary password.
@@ -49,6 +55,7 @@ class UserModel {
     this.profilePhotoUrl,
     required this.createdAt,
     required this.isActive,
+    this.specialization = '',
     this.mustChangePassword = false,
   });
 
@@ -63,6 +70,7 @@ class UserModel {
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.now(),
       isActive: json['isActive'] as bool? ?? true,
+      specialization: json['specialization'] as String? ?? '',
       mustChangePassword: json['mustChangePassword'] as bool? ?? false,
     );
   }
@@ -76,6 +84,7 @@ class UserModel {
         'profilePhotoUrl': profilePhotoUrl,
         'createdAt': createdAt.toUtc().toIso8601String(),
         'isActive': isActive,
+        'specialization': specialization,
         'mustChangePassword': mustChangePassword,
       };
 
@@ -88,6 +97,7 @@ class UserModel {
     String? profilePhotoUrl,
     DateTime? createdAt,
     bool? isActive,
+    String? specialization,
     bool? mustChangePassword,
   }) {
     return UserModel(
@@ -99,6 +109,7 @@ class UserModel {
       profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
       createdAt: createdAt ?? this.createdAt,
       isActive: isActive ?? this.isActive,
+      specialization: specialization ?? this.specialization,
       mustChangePassword: mustChangePassword ?? this.mustChangePassword,
     );
   }

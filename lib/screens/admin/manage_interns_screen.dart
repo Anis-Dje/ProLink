@@ -24,14 +24,22 @@ class _ManageInternsScreenState extends State<ManageInternsScreen>
   String _searchQuery = '';
   bool _loading = true;
 
-  final List<String> _tabs = ['All', 'Active', 'Pending', 'Rejected', 'Completed'];
-  final List<String?> _statusFilters = [
+  // "Completed" tab was dropped — completion is rare and we found it
+  // confused admins (they kept clicking it expecting active interns).
+  final List<String> _tabs = const ['All', 'Active', 'Pending', 'Rejected'];
+  final List<String?> _statusFilters = const [
     null,
     AppConstants.statusActive,
     AppConstants.statusPending,
     AppConstants.statusRejected,
-    AppConstants.statusCompleted,
   ];
+
+  /// `didChangeDependencies` fires every time an inherited dependency
+  /// changes — including when bottom sheets / dialogs push routes on
+  /// top of this screen. We only want to honour the route's `tab`
+  /// argument once on first build, otherwise the admin's manual tab
+  /// changes get clobbered the moment they open an intern's details.
+  bool _tabArgApplied = false;
 
   @override
   void initState() {
@@ -39,6 +47,24 @@ class _ManageInternsScreenState extends State<ManageInternsScreen>
     _tabController = TabController(length: _tabs.length, vsync: this);
     _tabController.addListener(_onTabChanged);
     _loadInterns();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_tabArgApplied) return;
+    // The dashboard "Pending" stat passes {'tab': 'pending'} here so we
+    // can land directly on that tab instead of "All". Apply once after
+    // the controller is built; ignore unknown tab names.
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map && args['tab'] is String) {
+      final wanted = (args['tab'] as String).toLowerCase();
+      final idx = _tabs.indexWhere((t) => t.toLowerCase() == wanted);
+      if (idx >= 0 && _tabController.index != idx) {
+        _tabController.index = idx;
+      }
+    }
+    _tabArgApplied = true;
   }
 
   @override
@@ -282,6 +308,12 @@ class _InternDetailsSheet extends StatelessWidget {
             value: AppUtils.getStatusLabel(intern.status),
             valueColor: AppUtils.getStatusColor(intern.status),
           ),
+          if (!intern.isActive)
+            const _InfoRow(
+              label: 'Account',
+              value: 'Disabled — cannot log in',
+              valueColor: AppColors.error,
+            ),
           _InfoRow(
             label: 'Registration date',
             value: AppUtils.formatDate(intern.registrationDate),

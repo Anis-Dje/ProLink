@@ -17,6 +17,34 @@ $mentorId = $body['mentorId'] ?? null;
 $department = $body['department'] ?? null;
 if ($id === '') pro_link_fail(400, 'missing_id', 'Intern id required.');
 
+// Enforce the 1-to-N specialization rule: an intern can only be paired
+// with a mentor that shares their specialization. Empty mentor specs
+// are rejected so we don't fall through to "any mentor" by accident.
+if ($mentorId !== null && $mentorId !== '') {
+    $check = $pdo->prepare(
+        'SELECT u.specialization AS mentor_spec, u.role AS mentor_role,
+                i.specialization AS intern_spec
+           FROM interns i, users u
+          WHERE i.id = :iid AND u.id = :mid');
+    $check->execute([':iid' => $id, ':mid' => $mentorId]);
+    $cmp = $check->fetch();
+    if (!$cmp) {
+        pro_link_fail(404, 'not_found', 'Intern or mentor not found.');
+    }
+    if ($cmp['mentor_role'] !== 'mentor') {
+        pro_link_fail(400, 'invalid_mentor',
+            'Selected user is not a mentor.');
+    }
+    $internSpec = trim((string)$cmp['intern_spec']);
+    $mentorSpec = trim((string)$cmp['mentor_spec']);
+    if ($internSpec === '' || $mentorSpec === '' ||
+        strcasecmp($internSpec, $mentorSpec) !== 0) {
+        pro_link_fail(400, 'specialization_mismatch',
+            'Mentor specialization must match the intern specialization. '
+                . 'Intern: "' . $internSpec . '" / Mentor: "' . $mentorSpec . '".');
+    }
+}
+
 $stmt = $pdo->prepare('UPDATE interns
                           SET mentor_id = :m,
                               department = COALESCE(:d, department)
@@ -24,7 +52,9 @@ $stmt = $pdo->prepare('UPDATE interns
 $stmt->execute([':m' => $mentorId, ':d' => $department, ':id' => $id]);
 $row = $stmt->fetch();
 if (!$row) pro_link_fail(404, 'not_found', 'Intern not found.');
-$join = $pdo->prepare('SELECT full_name, email, profile_photo_url FROM users WHERE id = :u');
+$join = $pdo->prepare('SELECT full_name, email, profile_photo_url,
+                              is_active AS user_is_active
+                         FROM users WHERE id = :u');
 $join->execute([':u' => $row['user_id']]);
 $row += $join->fetch();
 

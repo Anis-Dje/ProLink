@@ -20,7 +20,9 @@ $stmt = $pdo->prepare('UPDATE interns SET status = :s, rejection_reason = :r
 $stmt->execute([':s' => 'rejected', ':r' => $reason, ':id' => $id]);
 $row = $stmt->fetch();
 if (!$row) pro_link_fail(404, 'not_found', 'Intern not found.');
-$join = $pdo->prepare('SELECT full_name, email, profile_photo_url FROM users WHERE id = :u');
+$join = $pdo->prepare('SELECT full_name, email, profile_photo_url,
+                              is_active AS user_is_active
+                         FROM users WHERE id = :u');
 $join->execute([':u' => $row['user_id']]);
 $row += $join->fetch();
 pro_link_ok(['intern' => pro_link_intern_to_json($row)]);
